@@ -1,0 +1,103 @@
+{
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "Compile already configured kernel",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true,
+            },
+            "command": "bmake depend;bmake;bmake install",
+            "options": {
+                "cwd": "${workspaceFolder}/kern/compile/${input:kernconf}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+        },
+        {
+            "type": "shell",
+            "label": "Launch sys161",
+            "hide": true,
+            "isBackground": true,
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "dedicated",
+                "showReuseMessage": true,
+                "clear": true,
+            },
+            "command": "sys161 -w kernel",
+            "options": {
+                "cwd": "${workspaceFolder}/../root/"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+        },
+                {
+            "type": "shell",
+            "label": "Rebuild userland",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true,
+            },
+            "command": "bmake;bmake install",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+        },
+        {
+            "type": "shell",
+            "label": "Configure kernel",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": true,
+                "clear": true,
+            },
+            "command": "./config ${input:kernconf}",
+            "options": {
+                "cwd": "${workspaceFolder}/kern/conf"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+        },
+        {
+            "type": "shell",
+            "label": "Build and launch sys161",
+            "dependsOn":[
+                "Compile already configured kernel",
+                "Launch sys161"
+            ]
+        },
+    ],
+    "inputs": [
+    {
+        "id": "kernconf",
+        "description": "Kernel Configuration (default: DUMBVM): ",
+        "default": "DUMBVM",
+        "type": "promptString"
+    }
+    ],
+    "version": "2.0.0"
+}
