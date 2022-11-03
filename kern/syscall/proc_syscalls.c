@@ -10,7 +10,7 @@
 #include <current.h>
 #include <thread.h>
 #include <proc.h>
-//#include <openfile.h>
+#include <openfile.h>
 #include <limits.h>
 #include <kern/unistd.h>
 #include <kern/stat.h>
@@ -62,12 +62,19 @@ int sys_fork(struct trapframe *tf, pid_t *retval){
         err = ENOMEM;
         return err;
     }
-    //memcpy(childtf, tf, sizeof(struct trapframe *));
-    //memmove(childtf, tf, sizeof(struct trapframe *));
-    //childtf = tf;
     *childtf = *tf;
 
-    // TO DO: Copy parent's filetable
+    // Copy parent's filetable
+    for(int i=0;i<OPEN_MAX;i++) {
+		if(p->p_filetable[i] != NULL){
+			spinlock_acquire(&p->p_filetable[i]->of_lock);
+
+            p->p_filetable[i]->of_refcount++;
+			childproc->p_filetable[i] = p->p_filetable[i];
+			
+            spinlock_release(&p->p_filetable[i]->of_lock);
+		}
+	}
 
     // Launch the child execution (first thread creation)
     err = thread_fork("child",childproc,(void*)enter_forked_process,
@@ -94,7 +101,7 @@ int sys__exit(int exitcode){
     // TODO: chiusura file se ce n'è aperti
 
     // Check the presence of curproc in proctable
-    while(proctable[i]->p_pid != pid){
+    while((proctable[i]->p_pid != pid) && (i < MAX_PROCESSES)){
         i++;
     }
     if(i == MAX_PROCESSES){

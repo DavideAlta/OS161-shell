@@ -38,6 +38,7 @@
 
 #include <spinlock.h>
 #include <synch.h>
+#include <limits.h>
 
 #define MAX_PROCESSES 8 // Max number of running proccesess on the system
 
@@ -74,6 +75,8 @@ struct proc {
 	struct vnode *p_cwd;		/* current working directory */
 
 	/* add more material here as needed */
+
+	struct openfile *p_filetable[OPEN_MAX]; /* Array of pointers to openfile objects referred by file descriptors*/
 
 	pid_t p_pid; /* Process identifier */
 

@@ -11,11 +11,11 @@ int main(void){
 	
     pid_t pid;
 
-    //printf("sysfork test is running...\n");
+    printf("sysfork test is running...\n");
 
     pid = fork();
 
-    /*if(pid < 0){ // Error
+    if(pid < 0){ // Error
         printf("Forking has failed.\n");
     
     }else if(pid == 0){ // Child
@@ -24,7 +24,7 @@ int main(void){
     }else{ // Parent
         printf("This message is printed by parent process. The child pid is %d\n",pid);
     
-    }*/
+    }
 
     (void)pid;
 

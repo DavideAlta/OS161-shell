@@ -30,6 +30,8 @@
 #ifndef _TEST_H_
 #define _TEST_H_
 
+#include <proc.h>
+
 /*
  * Declarations for test code and other miscellaneous high-level
  * functions.
@@ -97,6 +99,9 @@ int nettest(int, char **);
 
 /* Routine for running a user-level program. */
 int runprogram(char *progname);
+
+/* Open the console files: STDIN, STDOUT and STDERR. */
+int console_init(struct proc *proc);
 
 /* Kernel menu system. */
 void menu(char *argstr);

@@ -66,4 +66,11 @@ int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
 int sys_fork(struct trapframe *tf, pid_t *retval);
 int sys__exit(int exitcode);
 
+/*
+ * File handling system calls
+ * (definition on syscall/file_syscalls.c) 
+*/
+int sys_open(userptr_t filename, int flags, int *retval);
+int sys_write(int fd, userptr_t buf, size_t buflen, int *retval);
+
 #endif /* _SYSCALL_H_ */

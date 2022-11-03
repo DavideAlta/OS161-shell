@@ -36,6 +36,7 @@
 #include <types.h>
 #include <kern/errno.h>
 #include <kern/fcntl.h>
+#include <kern/unistd.h> 
 #include <lib.h>
 #include <proc.h>
 #include <current.h>
@@ -44,6 +45,7 @@
 #include <vfs.h>
 #include <syscall.h>
 #include <test.h>
+#include <openfile.h>
 
 /*
  * Load program "progname" and start running it in usermode.
@@ -58,6 +60,7 @@ runprogram(char *progname)
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
+	struct proc *p = curproc;
 
 	/* Open the file. */
 	result = vfs_open(progname, O_RDONLY, 0, &v);
@@ -97,6 +100,12 @@ runprogram(char *progname)
 		return result;
 	}
 
+	/* Open the console files: STDIN, STDOUT and STDERR */
+	console_init(p);
+	if(result){
+		return result;
+	}
+
 	/* Warp to user mode. */
 	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
@@ -107,3 +116,60 @@ runprogram(char *progname)
 	return EINVAL;
 }
 
+/*
+ * Open the console files: STDIN, STDOUT and STDERR
+ */
+int
+console_init(struct proc *proc)
+{
+	struct vnode *v_stdin, *v_stdout, *v_stderr;
+	int result;
+	char *kconsole = (char *)kmalloc(5);
+	// Support openfile object
+	struct openfile *of_tmp;
+	of_tmp = kmalloc(sizeof(struct openfile));
+
+	strcpy(kconsole,"con:");
+	
+	result = vfs_open(kconsole, O_RDONLY, 0664, &v_stdin);
+	if (result) {
+		return result;
+	}
+	of_tmp->of_vnode = v_stdin;
+	of_tmp->of_flags = O_RDONLY;
+	of_tmp->of_offset = 0;
+    of_tmp->of_refcount = 1;
+    spinlock_init(&of_tmp->of_lock);
+
+	proc->p_filetable[STDIN_FILENO] = of_tmp;
+
+	strcpy(kconsole,"con:"); // because vfs_open modify the name string
+
+	result = vfs_open(kconsole, O_WRONLY, 0664, &v_stdout);
+	if (result) {
+		return result;
+	}
+	of_tmp->of_vnode = v_stdout;
+	of_tmp->of_flags = O_WRONLY;
+	of_tmp->of_offset = 0;
+    of_tmp->of_refcount = 1;
+    spinlock_init(&of_tmp->of_lock);
+
+	proc->p_filetable[STDOUT_FILENO] = of_tmp;
+
+	strcpy(kconsole,"con:");
+
+	result = vfs_open(kconsole, O_WRONLY, 0664, &v_stderr);
+	if (result) {
+		return result;
+	}
+	of_tmp->of_vnode = v_stderr;
+	of_tmp->of_flags = O_WRONLY;
+	of_tmp->of_offset = 0; // dummy
+    of_tmp->of_refcount = 1;
+    spinlock_init(&of_tmp->of_lock);
+
+	proc->p_filetable[STDERR_FILENO] = of_tmp;
+
+	return 0;
+}
