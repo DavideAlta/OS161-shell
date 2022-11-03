@@ -26,9 +26,5 @@ int main(void){
     
     }
 
-    (void)pid;
-
 	return 0;
 }
-
-// TO DO: per la printf serve sys_write e l'apertura della console

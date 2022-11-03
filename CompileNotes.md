@@ -40,7 +40,8 @@ command: `sys161 kernel-HELLO`
 ## OWN CUSTOM TEST
 Insert in `userland/testbin/<mytest>` the `<mytest>.c` and its Makefile (copied by other folders in testbin).
 
-For each modification: type bmake inside the userland folder (re-compile all the test).
+For each addition: insert inside the Makefile inside userland
+For each modification: type bmake and bmake install inside the userland folder (re-compile all the test).
 
 note: In the folder userland/testbin we have inserted the test of every single syscall (sysfork, ...).
 
