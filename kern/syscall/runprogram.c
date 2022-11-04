@@ -143,6 +143,9 @@ console_init(struct proc *proc)
 
 	proc->p_filetable[STDIN_FILENO] = of_tmp;
 
+	of_tmp = NULL;
+	of_tmp = kmalloc(sizeof(struct openfile));
+
 	strcpy(kconsole,"con:"); // because vfs_open modify the name string
 
 	result = vfs_open(kconsole, O_WRONLY, 0664, &v_stdout);
@@ -157,6 +160,9 @@ console_init(struct proc *proc)
 
 	proc->p_filetable[STDOUT_FILENO] = of_tmp;
 
+	of_tmp = NULL;
+	of_tmp = kmalloc(sizeof(struct openfile));
+
 	strcpy(kconsole,"con:");
 
 	result = vfs_open(kconsole, O_WRONLY, 0664, &v_stderr);
@@ -165,7 +171,7 @@ console_init(struct proc *proc)
 	}
 	of_tmp->of_vnode = v_stderr;
 	of_tmp->of_flags = O_WRONLY;
-	of_tmp->of_offset = 0; // dummy
+	of_tmp->of_offset = 0;
     of_tmp->of_refcount = 1;
     spinlock_init(&of_tmp->of_lock);
 
