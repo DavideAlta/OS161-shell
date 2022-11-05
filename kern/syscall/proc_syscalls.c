@@ -92,7 +92,6 @@ int sys_fork(struct trapframe *tf, pid_t *retval){
 int sys__exit(int exitcode){
 
     int i = 0;
-    struct proc *proctable_i;
     struct proc *p = curproc;
 
     spinlock_acquire(&p->p_lock);
@@ -122,18 +121,20 @@ int sys__exit(int exitcode){
         // Cause the current thread to exit
         thread_exit(); // is zombie (pointer is NULL but proc is still in memory)
     }else{
-        // Cause the current thread to exit
-        // proc_remthread(curthread); //o qui o dentro thread_exit TODO
-        thread_exit(); // is zombie (pointer is NULL but proc is still in memory)
+        // Remove the current thread
+        // (otherwise proc_destroy exits with error numthreads != 0)
+        proc_remthread(curthread);
 
         // Destroy the pid process
         proc_destroy(proctable[pid]);
+
         // pid is now available
         proctable[pid] = NULL;
-        proctable_i = proctable[pid];
-    }
 
-    (void)proctable_i;
+        // Cause the current thread to exit
+        // proc_remthread(curthread); //o qui o dentro thread_exit TODO
+        thread_exit(); // is zombie (pointer is NULL but proc is still in memory)
+    }
 
     return 0;
 }
