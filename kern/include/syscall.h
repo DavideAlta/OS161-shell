@@ -64,6 +64,8 @@ int sys___time(userptr_t user_seconds, userptr_t user_nanoseconds);
 	(definition on syscall/proc_syscalls.c)
 */
 int sys_fork(struct trapframe *tf, pid_t *retval);
+int sys_getpid(pid_t *retval);
+int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval);
 int sys__exit(int exitcode);
 
 /*

@@ -1,17 +1,18 @@
 /*
- * sysfork - test the fork() system call by printing
- * 2 different messages for child and parent processes.
+ * syswait
  */
 
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/wait.h>
 #include <err.h>
 
 int main(void){
 	
     pid_t pid, pidc, pidp;
+    int status;
 
-    printf("sysfork test is running...\n");
+    printf("syswait test is running...\n");
 
     pid = fork();
 
@@ -21,11 +22,13 @@ int main(void){
     }else if(pid == 0){ // Child
         pidc = getpid();
         printf("This message is printed by child process (pid = %d).\n",pidc);
+        _exit(4);
     
     }else{ // Parent
         pidp = getpid();
-        printf("This message is printed by parent process (pid = %d). The child pid is %d\n",pidp,pid);
-    
+        waitpid(pid, &status, 0);
+        printf("This message is printed by parent process (pid = %d) that is waiting for its child (pid = %d).\n",pidp,pid);
+        printf("The child process is exited with exit status %d\n", status);
     }
 
 	return 0;

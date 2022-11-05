@@ -789,7 +789,7 @@ thread_exit(void)
 	//proc_remthread(cur);
 
 	/* Make sure we *are* detached (move this only if you're sure!) */
-	//KASSERT(cur->t_proc == NULL);
+	//KASSERT(cur->t_proc == NULL); // TO DO: commentarlo o no?
 
 	/* Check the stack guard band. */
 	thread_checkstack(cur);

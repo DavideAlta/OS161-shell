@@ -89,6 +89,71 @@ int sys_fork(struct trapframe *tf, pid_t *retval){
     return 0;
 }
 
+int sys_getpid(pid_t *retval){
+
+    struct proc *p = curproc;
+
+    spinlock_acquire(&p->p_lock);
+
+    *retval = curproc->p_pid;
+
+    spinlock_release(&p->p_lock);
+
+    return 0;
+}
+
+int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
+    int err;
+    struct proc *p = curproc;
+    int *kstatus = (int *)kmalloc(sizeof(int));
+
+    // The options argument requested invalid or unsupported options.
+    if(options != 0){
+        err = EINVAL;
+        return err;
+    }
+
+    // The pid argument named a nonexistent process
+    if(proctable[pid] == NULL){
+        err = ESRCH;
+        return err;
+    }
+
+    // The pid argument named a process that was not a child of the current process.
+    if(proctable[pid]->p_parentpid != p->p_pid){
+        err = ECHILD;
+        return err;
+    }
+
+    // Parent process is waiting for child one
+    p->is_waiting = true;
+
+    // Wait for the child process
+    P(&proctable[pid]->p_waitsem);
+
+    *kstatus = proctable[pid]->exitcode;
+
+    // Remove the current thread
+    // (otherwise proc_destroy exits with error numthreads != 0)
+    proc_remthread(curthread);
+    // Destroy the pid process
+    proc_destroy(proctable[pid]);
+    // pid is now available
+    proctable[pid] = NULL;
+
+    *kstatus = _MKWAIT_EXIT(*kstatus);
+
+    err = copyout(kstatus, (userptr_t)status, sizeof(int));
+    if(err){
+        kfree(kstatus);
+        return err;
+    }
+
+    *retval = pid;
+
+    return 0;
+}
+
 int sys__exit(int exitcode){
 
     int i = 0;

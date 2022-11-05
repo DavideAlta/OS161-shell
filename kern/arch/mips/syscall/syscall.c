@@ -81,6 +81,7 @@ syscall(struct trapframe *tf)
 {
 	int callno;
 	int32_t retval;
+	int status; // status of waitpid syscall
 	int err;
 
 	KASSERT(curthread != NULL);
@@ -115,6 +116,17 @@ syscall(struct trapframe *tf)
 		case SYS_fork:
 		err = sys_fork(tf,			// trapframe of calling process
 						&retval);	// retval: child pid in parent and 0 in child
+		break;
+
+		case SYS_getpid:
+		err = sys_getpid(&retval);	// retval: current process pid
+		break;
+
+		case SYS_waitpid:
+		err = sys_waitpid((pid_t)tf->tf_a0,	// pid of process to wait for
+						  &status,			// exit status of the waited process
+						  (int)tf->tf_a1,	// options (should be 0, not implemented)
+						  &retval);			// retval: pid of process to wait for (same of 1st arg)
 		break;
 
 		case SYS__exit:
