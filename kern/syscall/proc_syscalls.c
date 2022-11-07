@@ -67,12 +67,12 @@ int sys_fork(struct trapframe *tf, pid_t *retval){
     // Copy parent's filetable
     for(int i=0;i<OPEN_MAX;i++) {
 		if(p->p_filetable[i] != NULL){
-			spinlock_acquire(&p->p_filetable[i]->of_lock);
+			P(p->p_filetable[i]->of_sem);
 
             p->p_filetable[i]->of_refcount++;
 			childproc->p_filetable[i] = p->p_filetable[i];
 			
-            spinlock_release(&p->p_filetable[i]->of_lock);
+            V(p->p_filetable[i]->of_sem);
 		}
 	}
 
@@ -93,11 +93,11 @@ int sys_getpid(pid_t *retval){
 
     struct proc *p = curproc;
 
-    spinlock_acquire(&p->p_lock);
+    P(&p->p_sem);
 
     *retval = curproc->p_pid;
 
-    spinlock_release(&p->p_lock);
+    V(&p->p_sem);
 
     return 0;
 }
@@ -106,6 +106,12 @@ int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
     int err;
     struct proc *p = curproc;
     int *kstatus = (int *)kmalloc(sizeof(int));
+    struct proc *childp;
+
+    // Get child process from global proctable
+    P(&pt_sem);
+    childp = proctable[pid];
+    V(&pt_sem);
 
     // The options argument requested invalid or unsupported options.
     if(options != 0){
@@ -114,32 +120,31 @@ int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
     }
 
     // The pid argument named a nonexistent process
-    if(proctable[pid] == NULL){
+    if(childp == NULL){
         err = ESRCH;
         return err;
     }
 
     // The pid argument named a process that was not a child of the current process.
-    if(proctable[pid]->p_parentpid != p->p_pid){
+    if(childp->p_parentpid != p->p_pid){
         err = ECHILD;
         return err;
     }
 
-    // Parent process is waiting for child one
-    p->is_waiting = true;
+    // proctable[p->p_pid]->is_waiting = true;
 
-    // Wait for the child process
-    P(&proctable[pid]->p_waitsem);
+    // Parent process waits for child one if it is no exited
+    if(!(childp->is_exited)){
+        P(&childp->p_waitsem); 
+    }   
 
-    *kstatus = proctable[pid]->exitcode;
+    *kstatus = childp->exitcode;
 
     // Remove the current thread
     // (otherwise proc_destroy exits with error numthreads != 0)
-    proc_remthread(curthread);
+    //proc_remthread(curthread);
     // Destroy the pid process
-    proc_destroy(proctable[pid]);
-    // pid is now available
-    proctable[pid] = NULL;
+    proc_destroy(childp);
 
     *kstatus = _MKWAIT_EXIT(*kstatus);
 
@@ -159,32 +164,32 @@ int sys__exit(int exitcode){
     int i = 0;
     struct proc *p = curproc;
 
-    spinlock_acquire(&p->p_lock);
+    P(&p->p_sem);
 
     pid_t pid = p->p_pid;
-    pid_t ppid = p->p_parentpid;
+    //pid_t ppid = p->p_parentpid;
 
     // TODO: chiusura file se ce n'è aperti
 
     // Check the presence of curproc in proctable
+    P(&pt_sem);
     while((proctable[i]->p_pid != pid) && (i < MAX_PROCESSES)){
         i++;
     }
     if(i == MAX_PROCESSES){
         return 0;
     }
+    V(&pt_sem);
 
     p->exitcode = exitcode; // TODO: _MKWAIT_EXIT(exitcode) ??
     p->is_exited = true;
 
-    spinlock_release(&p->p_lock);
+    V(&p->p_sem);
 
-    if(proctable[ppid]->is_waiting){
+    /*if(proctable[ppid]->is_waiting){
         // Signal the semaphore for waitpid
         V(&p->p_waitsem);
 
-        // Cause the current thread to exit
-        thread_exit(); // is zombie (pointer is NULL but proc is still in memory)
     }else{
         // Remove the current thread
         // (otherwise proc_destroy exits with error numthreads != 0)
@@ -196,10 +201,17 @@ int sys__exit(int exitcode){
         // pid is now available
         proctable[pid] = NULL;
 
-        // Cause the current thread to exit
-        // proc_remthread(curthread); //o qui o dentro thread_exit TODO
-        thread_exit(); // is zombie (pointer is NULL but proc is still in memory)
-    }
+    }*/
+
+    
+    // pid is now available
+    P(&pt_sem);
+    proctable[pid] = NULL;
+    V(&pt_sem);
+
+    // Cause the current thread to exit
+    proc_remthread(curthread); //o qui o dentro thread_exit TODO
+    thread_exit(); // is zombie (pointer is NULL but proc is still in memory)
 
     return 0;
 }

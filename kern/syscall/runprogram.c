@@ -125,8 +125,7 @@ console_init(struct proc *proc)
 	struct vnode *v_stdin, *v_stdout, *v_stderr;
 	int result;
 	char *kconsole = (char *)kmalloc(5);
-	// Support openfile object
-	struct openfile *of_tmp;
+	struct openfile *of_tmp; // support openfile object
 	of_tmp = kmalloc(sizeof(struct openfile));
 
 	strcpy(kconsole,"con:");
@@ -139,7 +138,7 @@ console_init(struct proc *proc)
 	of_tmp->of_flags = O_RDONLY;
 	of_tmp->of_offset = 0;
     of_tmp->of_refcount = 1;
-    spinlock_init(&of_tmp->of_lock);
+    of_tmp->of_sem = sem_create("sem_stdin",1);
 
 	proc->p_filetable[STDIN_FILENO] = of_tmp;
 
@@ -156,7 +155,7 @@ console_init(struct proc *proc)
 	of_tmp->of_flags = O_WRONLY;
 	of_tmp->of_offset = 0;
     of_tmp->of_refcount = 1;
-    spinlock_init(&of_tmp->of_lock);
+    of_tmp->of_sem = sem_create("sem_stdout",1);
 
 	proc->p_filetable[STDOUT_FILENO] = of_tmp;
 
@@ -173,7 +172,7 @@ console_init(struct proc *proc)
 	of_tmp->of_flags = O_WRONLY;
 	of_tmp->of_offset = 0;
     of_tmp->of_refcount = 1;
-    spinlock_init(&of_tmp->of_lock);
+    of_tmp->of_sem = sem_create("sem_stderr",1);
 
 	proc->p_filetable[STDERR_FILENO] = of_tmp;
 

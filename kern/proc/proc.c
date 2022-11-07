@@ -65,6 +65,9 @@ struct proc *proctable[MAX_PROCESSES];
 /*Counter of active processes*/
 int proc_counter;
 
+/**/
+struct semaphore pt_sem;
+
 /*
  * Create a proc structure.
  */
@@ -74,7 +77,7 @@ proc_create(const char *name)
 {
 	struct proc *proc;
 	pid_t pid = 0; // index of the process table
-	struct semaphore *sem; // to define the wait-exit semaphore
+	struct semaphore *semw, *semp, *sempt; // to define the semaphores
 
 	proc = kmalloc(sizeof(*proc));
 	if (proc == NULL) {
@@ -110,6 +113,9 @@ proc_create(const char *name)
 		for(int i=1;i<MAX_PROCESSES;i++){
 			proctable[i] = NULL;
 		}
+		/*Initializ the process table's semaphore*/
+		sempt = sem_create("pt_sem",1);
+		pt_sem = *sempt;
 	/*At the other processes...*/
 	}else{
 		while(proctable[pid] != NULL){
@@ -127,8 +133,10 @@ proc_create(const char *name)
 
 	proc->is_waiting = false;
 
-	sem = sem_create("waitexit sem",0);
-	proc->p_waitsem = *sem;
+	semp = sem_create("proc_sem",1);
+	proc->p_sem = *semp;
+	semw = sem_create("waitexit_sem",1);
+	proc->p_waitsem = *semw;
 
 	return proc;
 }
@@ -225,7 +233,10 @@ proc_destroy(struct proc *proc)
 	kfree(&proc->is_exited);
 	kfree(&proc->is_waiting);
 
-	sem_destroy(&proc->p_waitsem);*/
+	sem_destroy(&proc->p_sem);
+	sem_destroy(&proc->p_waitsem);
+
+	*/
 
 	kfree(proc);
 }

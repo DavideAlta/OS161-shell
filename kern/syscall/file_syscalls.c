@@ -90,7 +90,7 @@ int sys_open(userptr_t filename, int flags, int *retval){
     
     // Find the index of the first free slot of the file table
 
-    // spinlock_acquire(&curproc->p_lock); // TO DO: giusto ?
+    P(&p->p_sem);
 
     int i = STDERR_FILENO + 1;
     while((p->p_filetable[i] != NULL) && (i < OPEN_MAX)){
@@ -111,7 +111,7 @@ int sys_open(userptr_t filename, int flags, int *retval){
     of_tmp->of_flags = flags;
     of_tmp->of_vnode = vn;
     of_tmp->of_refcount = 1;
-    spinlock_init(&of_tmp->of_lock);
+    of_tmp->of_sem = sem_create("sem_file",1);
 
     // If append mode: the offset is equal to the file size
     if(append_mode){
@@ -131,7 +131,7 @@ int sys_open(userptr_t filename, int flags, int *retval){
     // Check if the filetable is no more NULL
     KASSERT(p->p_filetable[fd] != NULL);
 
-    // spinlock_release(&curproc->p_lock); // TO DO
+    V(&p->p_sem);
 
     // fd (i.e. retval) = Place of openfile inside the file table
     *retval = fd;
@@ -162,7 +162,7 @@ int sys_write(int fd, userptr_t buf, size_t buflen, int *retval){
     of = p->p_filetable[fd];
 
     // Synchronization of writing operations (the file must be locked during writing)
-    spinlock_acquire(&of->of_lock);
+    P(of->of_sem);
 
     // Check arguments validity :
 
@@ -200,7 +200,7 @@ int sys_write(int fd, userptr_t buf, size_t buflen, int *retval){
     // of->of_offset += u.uio_resid;
 
     // Synchronization of writing operations
-    spinlock_release(&of->of_lock);
+    V(of->of_sem);
 
     // uio_resid is the amount written => retval
     *retval = u.uio_resid;

@@ -76,6 +76,8 @@ struct proc {
 
 	/* add more material here as needed */
 
+	struct semaphore p_sem; /* Semaphore to synchronize each single process */
+
 	struct openfile *p_filetable[OPEN_MAX]; /* Array of pointers to openfile objects referred by file descriptors*/
 
 	pid_t p_pid; /* Process identifier */
@@ -93,6 +95,7 @@ struct proc {
 
 extern struct proc *proctable[MAX_PROCESSES];
 extern int proc_counter;
+extern struct semaphore pt_sem;
 
 /* This is the process structure for the kernel and for kernel-only threads. */
 extern struct proc *kproc;
