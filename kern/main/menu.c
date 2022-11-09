@@ -133,6 +133,9 @@ common_prog(int nargs, char **args)
 		return result;
 	}
 
+	// Wait for child processes termination to no print the menu's message
+	sys_waitpid(1,NULL,0,NULL);
+
 	/*
 	 * The new process will be destroyed when the program exits...
 	 * once you write the code for handling that.

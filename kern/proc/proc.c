@@ -107,6 +107,7 @@ proc_create(const char *name)
 	if(strcmp(name,"[kernel]") == 0){
 		proc->p_pid = 0;
 		proc->p_parentpid = 0;
+		//*proctable = kmalloc(sizeof(*proctable));
 		proctable[0] = proc;
 		proc_counter = 1;
 		/*Initialize the process table*/
@@ -135,7 +136,7 @@ proc_create(const char *name)
 
 	semp = sem_create("proc_sem",1);
 	proc->p_sem = *semp;
-	semw = sem_create("waitexit_sem",1);
+	semw = sem_create("waitexit_sem",0);
 	proc->p_waitsem = *semw;
 
 	return proc;

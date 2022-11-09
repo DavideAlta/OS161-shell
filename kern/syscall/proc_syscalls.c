@@ -113,11 +113,13 @@ int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
     childp = proctable[pid];
     V(&pt_sem);
 
+    (void)options;
+
     // The options argument requested invalid or unsupported options.
-    if(options != 0){
+    /*if(options != 0){
         err = EINVAL;
         return err;
-    }
+    }*/
 
     // The pid argument named a nonexistent process
     if(childp == NULL){
@@ -146,8 +148,6 @@ int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
     // Destroy the pid process
     proc_destroy(childp);
 
-    *kstatus = _MKWAIT_EXIT(*kstatus);
-
     err = copyout(kstatus, (userptr_t)status, sizeof(int));
     if(err){
         kfree(kstatus);
@@ -161,10 +161,11 @@ int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
 
 int sys__exit(int exitcode){
 
-    int i = 0;
+    //int i = 0;
     struct proc *p = curproc;
+    //struct proc **pt = proctable;
 
-    P(&p->p_sem);
+    //P(&p->p_sem);
 
     pid_t pid = p->p_pid;
     //pid_t ppid = p->p_parentpid;
@@ -172,19 +173,19 @@ int sys__exit(int exitcode){
     // TODO: chiusura file se ce n'è aperti
 
     // Check the presence of curproc in proctable
-    P(&pt_sem);
-    while((proctable[i]->p_pid != pid) && (i < MAX_PROCESSES)){
+    //P(&pt_sem);
+    /*while((proctable[i]->p_pid != pid) && (i < MAX_PROCESSES)){
         i++;
     }
     if(i == MAX_PROCESSES){
         return 0;
-    }
-    V(&pt_sem);
+    }*/
+    //V(&pt_sem);
 
-    p->exitcode = exitcode; // TODO: _MKWAIT_EXIT(exitcode) ??
+    p->exitcode = _MKWAIT_EXIT(exitcode);
     p->is_exited = true;
 
-    V(&p->p_sem);
+    //V(&p->p_sem);
 
     /*if(proctable[ppid]->is_waiting){
         // Signal the semaphore for waitpid
@@ -202,15 +203,16 @@ int sys__exit(int exitcode){
         proctable[pid] = NULL;
 
     }*/
-
     
     // pid is now available
-    P(&pt_sem);
-    proctable[pid] = NULL;
-    V(&pt_sem);
-
+    //P(&pt_sem);
+    //proctable[pid] = NULL;
+    //V(&pt_sem);
+    V(&p->p_waitsem);
     // Cause the current thread to exit
-    proc_remthread(curthread); //o qui o dentro thread_exit TODO
+    //proc_remthread(curthread); //o qui o dentro thread_exit TODO
+    //proc_destroy(proctable[pid]);
+    proctable[pid] = NULL;
     thread_exit(); // is zombie (pointer is NULL but proc is still in memory)
 
     return 0;
