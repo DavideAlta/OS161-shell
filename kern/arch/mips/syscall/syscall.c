@@ -145,6 +145,19 @@ syscall(struct trapframe *tf)
 						(size_t)tf->tf_a2,		// buf len
 						&retval);				// retval = written nbytes
 		break;
+
+		case SYS_read:
+		err = sys_read((int)tf->tf_a0,			// fd
+					   (userptr_t)tf->tf_a1,	// buf
+					   (size_t)tf->tf_a2,		// size (in byte)
+				   	   &retval);				// retval = read nbytes
+		break;
+
+		case SYS_close:
+		err = sys_close((int)tf->tf_a0);
+		break;
+
+		
 		
 		default:
 		kprintf("Unknown syscall %d\n", callno);

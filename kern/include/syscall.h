@@ -74,5 +74,7 @@ int sys__exit(int exitcode);
 */
 int sys_open(userptr_t filename, int flags, int *retval);
 int sys_write(int fd, userptr_t buf, size_t buflen, int *retval);
+int sys_read(int fd, userptr_t buf, size_t size, int *retval);
+int sys_close(int fd);
 
 #endif /* _SYSCALL_H_ */

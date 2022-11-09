@@ -207,3 +207,112 @@ int sys_write(int fd, userptr_t buf, size_t buflen, int *retval){
 
     return 0;
 }
+
+int sys_read(int fd, userptr_t buf, size_t size, int *retval)
+{
+    int err;
+    int offset; // temporary variable to store the openfile field
+    struct iovec iov;
+    struct uio u;
+    struct openfile *of; // tmp
+    struct proc *p = curproc; // tmp
+
+    char kbuf[size];// = kmalloc(size); // buffer inside kernel space
+
+    KASSERT(curthread != NULL);
+    KASSERT(curproc != NULL );
+
+    of = p->p_filetable[fd];
+
+    // Synchronization of reading operations (the file must be locked during reading)
+    P(of->of_sem);
+    
+    // Check arguments validity :
+
+    // fd is not a valid file descriptor, or was not opened for reading
+    if(fd < 0 || fd >= OPEN_MAX || of == NULL ||
+       (!(((of->of_flags&O_RDONLY) == O_RDONLY) ||
+       ((of->of_flags&O_RDWR) == O_RDWR)))){
+        err = EBADF;
+        return err;
+    }
+
+    // - Part or all of the address space pointed to by buf is invalid
+    if(buf == NULL){
+        err = EFAULT;
+        return err;
+    }
+
+    offset = of->of_offset;
+
+    // Setup the uio record (use a proper function to init all fields)
+	uio_kinit(&iov, &u, kbuf, size, offset, UIO_READ);
+    u.uio_space = p->p_addrspace;
+	u.uio_segflg = UIO_USERSPACE; // for user space address
+
+    /* VOP_READ - Read data from file to uio, at offset specified
+                  in the uio, updating uio_resid to reflect the
+                  amount read, and updating uio_offset to match.*/
+	err = VOP_READ(of->of_vnode, &u);
+	if (err) {
+		return err;
+	}
+
+    // uio_resid is the remaining byte to read => retval (the read bytes) is size-resid
+    *retval = size - u.uio_resid; // + 1 ? To test !
+    // offset update
+    of->of_offset = u.uio_offset; // Giusto ?
+
+    // Copy the buffer from kernel to user space to make it available for the user
+    // (used at point 2)
+    err = copyout(kbuf, buf, size);
+    if(err){
+        kfree(kbuf);
+        return err;
+    }
+
+    // Synchronization of reading operations
+    V(of->of_sem);
+
+    return 0;
+}
+
+int sys_close(int fd){
+
+    int err;
+    struct openfile *of; // tmp
+    struct proc *p = curproc; // tmp
+
+    KASSERT(curthread != NULL);
+    KASSERT(curproc != NULL );
+    
+    of = p->p_filetable[fd];
+    
+    P(of->of_sem);
+
+    // Check arguments validity:
+
+    // - fd is not a valid file handle
+    if(fd < 0 || fd >= OPEN_MAX || of == NULL){
+        err = EBADF;
+        return err;
+    } 
+
+    // Delete the openfile structure only if it is the last open
+    
+    of->of_refcount--;
+
+    if(of->of_refcount == 0){ // Last open => openfile removal
+        vfs_close(of->of_vnode);
+        V(of->of_sem);
+        sem_destroy(of->of_sem);
+        kfree(of);
+
+    }else{ // No last open (no removal)
+        V(of->of_sem);
+    }
+
+    curproc->p_filetable[fd] = NULL;
+
+    return 0;
+}
