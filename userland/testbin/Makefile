@@ -12,7 +12,7 @@ SUBDIRS=add argtest badcall bigexec bigfile bigfork bigseek bloat conman \
 	randcall redirect rmdirtest rmtest \
 	sbrktest schedpong sort sparsefile tail tictac triplehuge \
 	triplemat triplesort usemtest zero \
-	sysfork syswait sysfiletest helloworld
+	sysfork syswait sysfiletest sysfiletest2 helloworld
 
 # But not:
 #    userthreads    (no support in kernel API in base system)

@@ -157,8 +157,19 @@ syscall(struct trapframe *tf)
 		err = sys_close((int)tf->tf_a0);
 		break;
 
-		
-		
+		case SYS_lseek:
+		err = sys_lseek((int)tf->tf_a0,			// fd
+						(off_t)tf->tf_a1,		// offset of the pointer in bytes (could be neg)
+						(int)tf->tf_a2,			// where the seek should be performed (flag)
+						&retval);				// retval = offset of the pointers
+		break;
+
+		case SYS_dup2:
+		err = sys_dup2((int) tf->tf_a0,				// old fd
+				   	   (int) tf->tf_a1,				// new fd
+				   	   &retval);					// retval = new fd
+		break;
+	
 		default:
 		kprintf("Unknown syscall %d\n", callno);
 		err = ENOSYS;

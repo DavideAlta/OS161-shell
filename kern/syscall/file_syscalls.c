@@ -307,3 +307,119 @@ int sys_close(int fd){
 
     return 0;
 }
+
+int sys_lseek(int fd, off_t pos, int whence, int *retval){
+
+    int err;
+    int offset;
+    int filesize;
+    struct stat statbuf;
+    struct proc *p = curproc;
+    struct openfile *of = p->p_filetable[fd];
+
+    KASSERT(curthread != NULL);
+    KASSERT(curproc != NULL );
+
+    P(of->of_sem);
+
+    // Check fd validity
+
+    // fd is not a valid file handle
+    if(fd < 0 || fd >= OPEN_MAX || of == NULL){
+        err = EBADF;
+        return err;
+    }
+
+    // fd refers to an object which does not support seeking
+    if((fd >= STDIN_FILENO) && (fd<=STDERR_FILENO)){
+        err = ESPIPE;
+        return err;
+    } 
+
+    // Retrieve the file size to can use it then
+	err = VOP_STAT(of->of_vnode, &statbuf);
+	if (err){
+        //kfree(curproc->p_filetable[fd]);
+        //curproc->p_filetable[fd] = NULL;
+        return err;
+    }else{
+        filesize = statbuf.st_size;
+    }
+
+    // Check how is the flag passed as argument
+    switch(whence){
+        case SEEK_SET: // the new position is pos
+            offset = pos;
+        break;
+        case SEEK_CUR: // the new position is the current position plus pos
+            offset = of->of_offset + pos;
+        break;
+        case SEEK_END: // the new position is the position of end-of-file plus pos
+            offset =  filesize + pos;
+        break;
+
+        default:
+            // whence is invalid
+            err = EINVAL;
+            return err;
+        break;
+    }
+    
+    // The resulting seek position would be negative (or beyond file size)
+    if((offset < 0) || (offset > filesize)){
+        err = EINVAL;
+        return err;
+    }
+
+    // Update the file offset
+    of->of_offset = offset;
+
+    V(of->of_sem);
+
+    *retval = offset;
+
+    return 0;
+}
+
+int sys_dup2(int oldfd, int newfd, int *retval){
+
+    int err;
+    struct proc *p = curproc;
+    struct openfile *oldof = p->p_filetable[oldfd];
+    struct openfile *newof = p->p_filetable[newfd];
+
+    KASSERT(curthread != NULL);
+    KASSERT(curproc != NULL);
+
+    // Check arguments validity
+
+    // old/newfd is not a valid file handle
+    if(oldfd < 0 || oldfd >= OPEN_MAX || oldof == NULL ||
+       newfd < 0 || newfd >= OPEN_MAX ){
+        err = EBADF;
+        return err;
+    }
+
+    // using dup2 to clone a file handle onto itself has no effect
+    if (newfd == oldfd){
+        *retval = newfd;
+        return 0;
+    }
+
+    // Check if the new fd is already associated to an open file, if yes close it
+    if(newof != NULL){
+        err = sys_close(newfd);
+        if(err)
+            return err;
+    }
+
+    // Copy the openfile pointer of the old fd inside the new fd and update the refcount
+    curproc->p_filetable[newfd] = oldof;
+    P(oldof->of_sem);
+    curproc->p_filetable[oldfd]->of_refcount++;
+    V(oldof->of_sem);
+
+    *retval = newfd;
+
+    return 0;
+}
