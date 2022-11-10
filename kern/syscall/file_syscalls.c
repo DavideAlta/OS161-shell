@@ -32,7 +32,7 @@ int sys_open(userptr_t filename, int flags, int *retval){
     int fd;
     char *kfilename; // filename string inside kernel space
     struct openfile *of_tmp;
-
+    size_t filename_len=0;
     
     // Check arguments validity :
     
@@ -43,8 +43,9 @@ int sys_open(userptr_t filename, int flags, int *retval){
     }
 
     // Copy the filename string from user to kernel space to protect it
-    kfilename = kmalloc(strlen((const char *)filename) + 1);
-    err = copyinstr(filename, kfilename, sizeof(kfilename), NULL);
+    filename_len = strlen((char *)filename) + 1;
+    kfilename = kmalloc(filename_len);
+    err = copyinstr(filename, kfilename, filename_len, NULL);
     if(err){
         return err;
     }
@@ -217,8 +218,6 @@ int sys_read(int fd, userptr_t buf, size_t size, int *retval)
     struct openfile *of; // tmp
     struct proc *p = curproc; // tmp
 
-    char kbuf[size];// = kmalloc(size); // buffer inside kernel space
-
     KASSERT(curthread != NULL);
     KASSERT(curproc != NULL );
 
@@ -246,7 +245,7 @@ int sys_read(int fd, userptr_t buf, size_t size, int *retval)
     offset = of->of_offset;
 
     // Setup the uio record (use a proper function to init all fields)
-	uio_kinit(&iov, &u, kbuf, size, offset, UIO_READ);
+	uio_uinit(&iov, &u, buf, size, offset, UIO_READ);
     u.uio_space = p->p_addrspace;
 	u.uio_segflg = UIO_USERSPACE; // for user space address
 
@@ -259,17 +258,9 @@ int sys_read(int fd, userptr_t buf, size_t size, int *retval)
 	}
 
     // uio_resid is the remaining byte to read => retval (the read bytes) is size-resid
-    *retval = size - u.uio_resid; // + 1 ? To test !
+    *retval = size - u.uio_resid;
     // offset update
-    of->of_offset = u.uio_offset; // Giusto ?
-
-    // Copy the buffer from kernel to user space to make it available for the user
-    // (used at point 2)
-    err = copyout(kbuf, buf, size);
-    if(err){
-        kfree(kbuf);
-        return err;
-    }
+    of->of_offset = u.uio_offset;
 
     // Synchronization of reading operations
     V(of->of_sem);
