@@ -423,3 +423,93 @@ int sys_dup2(int oldfd, int newfd, int *retval){
 
     return 0;
 }
+
+int sys_chdir(userptr_t pathname){
+
+    int err;
+    struct vnode *vn = NULL;
+    //char *kpathname;
+    char kpathname[PATH_MAX+1];
+    size_t path_len = 0;
+
+    KASSERT(curthread != NULL);
+    KASSERT(curproc != NULL );
+
+    // Check argument
+
+    // pathname was an invalid pointer.
+    if(pathname == NULL){
+        err = EFAULT;
+        return err;
+    }
+
+    // Copy the pathname string from user to kernel space to protect it
+    path_len = strlen((char *)pathname) + 1;
+    //kpathname = kmalloc(path_len);
+    err = copyinstr(pathname, kpathname, path_len, NULL);
+    if(err)
+        return err;
+
+    /* Obtain a vnode object associated to the passed path to set */
+    err = vfs_open(kpathname, O_RDONLY, 0, &vn);
+    if(err)
+        return err;
+
+    /* Do curproc->p_cwd = vn (spinlock handling is inside vfs_setcurdir)*/
+    err = vfs_setcurdir(vn);
+    if(err)
+        return err;
+
+    return 0;
+}
+
+int sys___getcwd(userptr_t buf, size_t buflen, int *retval){
+
+    int err;
+    struct iovec iov;
+    struct uio u;
+    //char kbuf[PATH_MAX+1]; // buffer inside kernel space
+
+    KASSERT(curthread != NULL);
+    KASSERT(curproc != NULL );
+
+    // Check arguments
+
+    // buf points to an invalid address.
+    if(buf == NULL){
+        err = EFAULT;
+        return err;
+    }
+
+    /* Setup the uio record (use a proper function to init all fields) */
+	uio_uinit(&iov, &u, buf, buflen, 0, UIO_READ);
+    u.uio_space = curproc->p_addrspace;
+	u.uio_segflg = UIO_USERSPACE; // for user space address
+
+    // Retrieve the uio struct associated with the current directory
+    err = vfs_getcwd(&u);
+    if(err)
+        return err;
+
+    // Actual lenght of the current pathname directory is returned
+    *retval = buflen - u.uio_resid;
+
+    /*[ | | | ] buflen 4
+    [c|i|a| ] resid 0
+    rivedere retval
+    */
+
+    // 
+    if(*retval < 0){
+        err = EFAULT;
+    }
+
+    // Copy the buffer from kernel to user space to make it available for the user
+    /*err = copyout(kbuf, buf, buflen);
+    if(err){
+        kfree(kbuf);
+        return err;
+    }*/
+
+    return 0;
+}

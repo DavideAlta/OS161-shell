@@ -189,6 +189,16 @@ syscall(struct trapframe *tf)
 				   	   (int) tf->tf_a1,				// new fd
 				   	   &retval);					// retval = new fd
 		break;
+
+		case SYS_chdir:
+		err = sys_chdir((userptr_t)tf->tf_a0);		// pathname
+		break;
+
+		case SYS___getcwd:
+		err = sys___getcwd((userptr_t)tf->tf_a0,	// buf: name of current dir
+						   (size_t)tf->tf_a1,		// buflen: len of buf
+						   &retval);				// retval: actual len of current dir 
+		break;
 	
 		default:
 		kprintf("Unknown syscall %d\n", callno);
