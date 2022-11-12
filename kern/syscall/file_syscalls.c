@@ -308,10 +308,10 @@ int sys_close(int fd){
     return 0;
 }
 
-int sys_lseek(int fd, off_t pos, int whence, int *retval){
+int sys_lseek(int fd, off_t pos, int whence, int64_t *retval){
 
     int err;
-    int offset;
+    off_t offset;
     int filesize;
     struct stat statbuf;
     struct proc *p = curproc;

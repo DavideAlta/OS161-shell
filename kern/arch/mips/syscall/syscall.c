@@ -36,6 +36,7 @@
 #include <current.h>
 #include <syscall.h>
 #include <addrspace.h>
+#include <copyinout.h>
 
 
 /*
@@ -81,8 +82,12 @@ syscall(struct trapframe *tf)
 {
 	int callno;
 	int32_t retval;
+	int64_t arg64, retval64;
+	int extrarg; // to get a parameter from userl-level stack
 	int status; // status of waitpid syscall
 	int err;
+
+	bool is_retval64 = false; // if the retval is on 64 bit
 
 	KASSERT(curthread != NULL);
 	KASSERT(curthread->t_curspl == 0);
@@ -158,10 +163,25 @@ syscall(struct trapframe *tf)
 		break;
 
 		case SYS_lseek:
-		err = sys_lseek((int)tf->tf_a0,			// fd
-						(off_t)tf->tf_a1,		// offset of the pointer in bytes (could be neg)
-						(int)tf->tf_a2,			// where the seek should be performed (flag)
-						&retval);				// retval = offset of the pointers
+		/* If you run out of registers (which happens quickly with 64-bit
+ 		* values, i.e. pos argument) further arguments must be fetched 
+		* from the user-level stack, starting at sp+16 to skip over the
+		* slots for the registerized values, with copyin()*/
+		err = copyin((userptr_t)(tf->tf_sp + 16), &extrarg, sizeof(int));
+		/* 64-bit arguments are passed in *aligned*
+ 		 * pairs of registers, that is, either a0/a1 or a2/a3. This means that
+ 		 * if the first argument is 32-bit and the second is 64-bit, a1 is
+ 		 * unused.*/
+		arg64 = tf->tf_a2;
+		arg64 = arg64 << 32; // tf_a2 on MSBs
+		arg64 = arg64 | tf->tf_a3; // tf->tf_a3 on LSBs
+		if(!err){
+			err = sys_lseek((int)tf->tf_a0,			// fd
+							(off_t)arg64,			// offset of the pointer in bytes (could be neg)
+							extrarg,				// where the seek should be performed (flag)
+							&retval64);				// retval = offset of the pointers
+			is_retval64 = true;
+		}
 		break;
 
 		case SYS_dup2:
@@ -188,7 +208,12 @@ syscall(struct trapframe *tf)
 	}
 	else {
 		/* Success. */
-		tf->tf_v0 = retval;
+		if(is_retval64){
+			tf->tf_v0 = (int32_t)(retval64 >> 32); // get 32 MSBs
+			tf->tf_v1 = (int32_t)retval64; // get 32 LSBs
+		}else{
+			tf->tf_v0 = retval;
+		}
 		tf->tf_a3 = 0;      /* signal no error */
 	}
 

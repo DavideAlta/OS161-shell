@@ -10,7 +10,8 @@
 int
 main()
 {
-	static char readbuf[8];
+	static char readbuf1[8];
+    static char readbuf2[8];
 
 	char file_rd[22] = "./mytest/testread.txt";
 
@@ -25,16 +26,16 @@ main()
 		return -1;
 	}
 
-	rv = read(fd, readbuf, 8);
+	rv = read(fd, readbuf1, 8);
 	if (rv<0) {
 		printf("File read 1 failed.\n");
 		return -1;
 	}
 
     /* ensure null termination */
-	readbuf[7] = 0;
+	readbuf1[7] = 0;
 
-    printf("1st reading = %s\n",readbuf);
+    printf("1st reading = %s\n",readbuf1);
 
     rv = dup2(fd, fd_clone);
     if (rv != fd_clone){
@@ -42,28 +43,28 @@ main()
         return -1;
     }
 
-    rv = lseek(fd, 2, SEEK_SET);
-    /*if(rv != 6){
+    rv = lseek(fd, -10, SEEK_END);
+    if(rv != 12){ // 22 - 10
         printf("lseek failed.\n");
         return -1;
-    }*/
+    }
 
     rv = close(fd);
 	if (rv<0) {
 		printf("File close rd failed.\n");
 		return -1;
 	}
-
-    rv = read(fd_clone, readbuf, 8);
+    
+    rv = read(fd_clone, readbuf2, 8);
     if (rv<0) {
 		printf("File read 2 failed.\n");
 		return -1;
 	}
 
     /* ensure null termination */
-	readbuf[7] = 0;
+	readbuf2[7] = 0;
 
-    printf("2nd reading = %s\n",readbuf);
+    printf("2nd reading = %s\n",readbuf2);
 
     rv = close(fd_clone);
 	if (rv<0) {
