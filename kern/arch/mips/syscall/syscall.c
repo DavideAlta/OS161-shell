@@ -199,6 +199,11 @@ syscall(struct trapframe *tf)
 						   (size_t)tf->tf_a1,		// buflen: len of buf
 						   &retval);				// retval: actual len of current dir 
 		break;
+
+		case SYS_execv:
+		err = sys_execv((char *)tf->tf_a0,
+						(char **)tf->tf_a1);
+		break;
 	
 		default:
 		kprintf("Unknown syscall %d\n", callno);

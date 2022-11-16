@@ -217,3 +217,67 @@ int sys__exit(int exitcode){
 
     return 0;
 }
+
+/*
+ * sys_execv() is very similar to runprogram() but with some modifications
+ * Since runprogram() loads a program and start running it in usermode
+*/
+
+int sys_execv(char *program, char **args){
+
+    int err;
+    struct vnode *vn;
+    struct addrspace *as;
+    vaddr_t entrypoint, stackptr;
+    char **argv = args;
+
+    (void)argv;
+
+    /* Create a new address space and load the executable into it
+     * (same of runprogram) */
+
+    // Open the "program" file
+    err = vfs_open(program, O_RDONLY, 0, &vn);
+    if(err){
+        return err;
+    }
+
+    // Create a new address space
+	as = as_create();
+	if(as == NULL) {
+		vfs_close(vn);
+		err = ENOMEM;
+        return err;
+	}
+
+    // Change the current address space and activate it
+	proc_setas(as);
+	as_activate();
+
+    // Load the executable "program"
+	err = load_elf(vn, &entrypoint);
+	if (err) {
+		vfs_close(vn);
+		return err;
+	}
+
+    // File is loaded and can be closed
+	vfs_close(vn);
+
+    // Define the user stack in the address space
+	err = as_define_stack(as, &stackptr);
+	if (err) {
+		return err;
+	}
+
+    enter_new_process(0 /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
+			  NULL /*userspace addr of environment*/,
+			  stackptr, entrypoint);
+
+    // enter_new_process does not return
+	panic("enter_new_process in execv returned\n");
+
+    err = EINVAL;
+
+    return err;
+}

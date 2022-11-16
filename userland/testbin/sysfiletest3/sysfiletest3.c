@@ -2,21 +2,25 @@
  * sysfiletest3.c
  */
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <err.h>
+#include <limits.h>
 
 int
 main()
 {
-	char path1[32];
-	char path2[32];
-	char newpath[13] = "./emu0/mytest";
+	char path1[PATH_MAX+1], *p;
+	char path2[PATH_MAX+1];
+	//char newpath[7] = "/mytest";
 	int rv;
 
-	rv = __getcwd(path1, 32);
-	if(rv < 0){
+	
+	p = getcwd(path1, sizeof(path1));
+	if(p == NULL){
 		printf("getcwd 1 failed.\n");
 		return -1;
 	}
@@ -26,20 +30,20 @@ main()
 
 	printf("The current dir is %s\n",path1);
 
-	rv = chdir(newpath);
-	if(rv < 0){
+	rv = chdir("emu0:/mytest");
+	if(rv == -1){
 		printf("chdir failed.\n");
 		return -1;
 	}
 
-	rv = __getcwd(path2, 32);
-	if(rv < 0){
+	p = getcwd(path2, sizeof(path2));
+	if(p == NULL){
 		printf("getcwd 2 failed.\n");
 		return -1;
 	}
 
 	/* ensure null termination */
-	path2[31] = 0;
+	path2[PATH_MAX-1] = 0;
 
 	printf("The current dir is %s\n",path2);
 

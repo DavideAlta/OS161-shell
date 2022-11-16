@@ -32,7 +32,7 @@ int sys_open(userptr_t filename, int flags, int *retval){
     int fd;
     char *kfilename; // filename string inside kernel space
     struct openfile *of_tmp;
-    size_t filename_len=0;
+    //size_t filename_len=0;
     
     // Check arguments validity :
     
@@ -43,11 +43,9 @@ int sys_open(userptr_t filename, int flags, int *retval){
     }
 
     // Copy the filename string from user to kernel space to protect it
-    filename_len = strlen((char *)filename) + 1;
-    kfilename = kmalloc(filename_len);
-    err = copyinstr(filename, kfilename, filename_len, NULL);
-    if(err){
-        return err;
+    kfilename = kstrdup((char *)filename);
+    if(kfilename==NULL){
+        return ENOMEM;
     }
 
     // - Flags
@@ -431,9 +429,10 @@ int sys_chdir(userptr_t pathname){
     //char *kpathname;
     char kpathname[PATH_MAX+1];
     size_t path_len = 0;
+    struct proc *p = curproc;
 
     KASSERT(curthread != NULL);
-    KASSERT(curproc != NULL );
+    KASSERT(p != NULL );
 
     // Check argument
 
@@ -451,12 +450,13 @@ int sys_chdir(userptr_t pathname){
         return err;
 
     /* Obtain a vnode object associated to the passed path to set */
-    err = vfs_open(kpathname, O_RDONLY, 0, &vn);
+    err = vfs_open(kpathname, O_RDONLY, 0644, &vn);
     if(err)
         return err;
 
     /* Do curproc->p_cwd = vn (spinlock handling is inside vfs_setcurdir)*/
-    err = vfs_setcurdir(vn);
+    //err = vfs_setcurdir(vn);
+    err = vfs_chdir((char *)pathname);
     if(err)
         return err;
 
