@@ -166,15 +166,17 @@ vfs_getcwd(struct uio *uio)
 	}
 	KASSERT(name != NULL);
 
-	result = uiomove((char *)name, strlen(name), uio);
-	if (result) {
-		goto out;
+	if(strcmp(curproc->p_cwdpath,"emu0:") == 0){
+		result = uiomove((char *)name, strlen(name), uio);
+		if (result) {
+			goto out;
+		}
+		result = uiomove(&colon, 1, uio);
+		if (result) {
+			goto out;
+		}
 	}
-	result = uiomove(&colon, 1, uio);
-	if (result) {
-		goto out;
-	}
-
+	
 	result = VOP_NAMEFILE(cwd, uio);
 
  out:

@@ -130,9 +130,10 @@ proc_create(const char *name)
 		proc_counter++;
 	}
 
-	proc->is_exited = false;
+	// Initialize cwd path to the device name
+	strcpy(proc->p_cwdpath,"emu0:");
 
-	proc->is_waiting = false;
+	proc->is_exited = false;
 
 	semp = sem_create("proc_sem",1);
 	proc->p_sem = *semp;

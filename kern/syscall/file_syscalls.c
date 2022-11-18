@@ -424,11 +424,12 @@ int sys_dup2(int oldfd, int newfd, int *retval){
 
 int sys_chdir(userptr_t pathname, int *retval){
 
-    int err;
+    int err, len, i;
     struct vnode *vn = NULL;
-    //char *kpathname;
-    char *kpathname;
+    char *kpathname, tmpcwd[PATH_MAX+1], tmppath[PATH_MAX+1];
     struct proc *p = curproc;
+    char *context;
+    //char str[PATH_MAX] = "/";
 
     KASSERT(curthread != NULL);
     KASSERT(p != NULL );
@@ -447,21 +448,80 @@ int sys_chdir(userptr_t pathname, int *retval){
         return ENOMEM;
     }
 
+    strcpy(tmpcwd,p->p_cwdpath);
+    if(tmpcwd==NULL){
+        return ENOMEM;
+    }
+
+    // Useful because vfs_open changes the string
+    strcpy(tmppath,kpathname);
+    if(tmppath==NULL){
+        return ENOMEM;
+    }
     /* Obtain a vnode object associated to the passed path to set */
-    err = vfs_open(kpathname, O_RDONLY, 0644, &vn);
+    err = vfs_open(tmppath, O_RDONLY, 0644, &vn);
     if(err)
         return err;
 
     /* Do curproc->p_cwd = vn (spinlock handling is inside vfs_setcurdir)*/
-    //err = vfs_setcurdir(vn);
     err = vfs_chdir((char *)pathname);
-    if(err)
+    if(err){
         return err;
+    }else{ // on success copy the new pathname to p_cwdpath
 
-    *retval = 0;
+        strcpy(tmppath,kpathname);
+
+        // if pathname starts with "emu0:" is an absolute path
+        if(strcmp(strtok_r(tmppath,":",&context),"emu0") == 0){
+            
+            strcpy(p->p_cwdpath, kpathname);
+        
+        }else{ // if relative path
+
+            // previous directory case
+            while(strcmp(strtok_r(tmppath,"/",&context),"..") == 0){
+                // remove "../" from kpathname
+                len = strlen(kpathname);
+                for(i=0; i<=(len-3);i++){
+                    kpathname[i] = kpathname[i+3];
+                }
+                kpathname[i] = 0; //null termination
+                // remove the last directory from p_cwdpath
+                len = strlen(tmpcwd);
+                i = 0;
+                while(tmpcwd[len-i] != '/'){
+                    tmpcwd[len-i] = 0;
+                    i++;
+                }
+                // re-start from context (the right part of the string)
+                strcpy(tmppath,context);
+            }
+            // in all cases: concatenation and updating of cwd path
+            /*if(tmpcwd[0] != '/'){
+                strcat(str,kpathname);
+                strcat(tmpcwd,str);
+            }else{
+                strcat(tmpcwd,kpathname);
+            }*/
+            strcat(tmpcwd,kpathname);
+            strcpy(p->p_cwdpath,tmpcwd);
+        }
+
+        *retval = 0;
+    }
 
     return 0;
 }
+
+/* Example for previous directory case:
+
+emu0: > mytest > pippo
+      > yourtest
+p_cwdpath   emu0:/mytest/pippo
+kpathname      ../../yourtest
+emu0:/ + yourtest
+new p_cwdpath   emu0:/yourtest
+*/
 
 int sys___getcwd(userptr_t buf, size_t buflen, int *retval){
 

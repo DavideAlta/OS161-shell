@@ -30,7 +30,7 @@ main()
 
 	printf("The current dir is %s\n",path1);
 
-	rv = chdir("emu0:/mytest");
+	rv = chdir("mytest");
 	if(rv == -1){
 		printf("chdir failed.\n");
 		return -1;

@@ -47,6 +47,10 @@ int sys_fork(struct trapframe *tf, pid_t *retval){
 
     // TODO: Bloccare proctable con un semaforo ?
 
+    // Child inherits the cwd by parent
+    childproc->p_cwd = p->p_cwd;
+    strcpy(childproc->p_cwdpath, p->p_cwdpath);
+
     // Parent is the calling process (curproc)
     childproc->p_parentpid = p->p_pid;
 

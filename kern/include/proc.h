@@ -88,9 +88,9 @@ struct proc {
 
 	bool is_exited; /* The process is going to be exited */
 
-	bool is_waiting; /* The process is waiting for the child termination*/
-
 	struct semaphore p_waitsem; /* Semaphore for wait-exit mechanism*/
+
+	char p_cwdpath[PATH_MAX+1]; /* String to store the current working directory pointed by p_cwd */
 };
 
 extern struct proc *proctable[MAX_PROCESSES];
