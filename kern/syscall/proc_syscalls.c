@@ -105,7 +105,6 @@ int sys_getpid(pid_t *retval){
 int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
     int err;
     struct proc *p = curproc;
-    int *kstatus = (int *)kmalloc(sizeof(int));
     struct proc *childp;
 
     // Get child process from global proctable
@@ -140,19 +139,14 @@ int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
         P(&childp->p_waitsem); 
     }   
 
-    *kstatus = childp->exitcode;
+    *status = childp->exitcode;
+    //TO DO: _MKWAIT_EXIT()
 
     // Remove the current thread
     // (otherwise proc_destroy exits with error numthreads != 0)
     //proc_remthread(curthread);
     // Destroy the pid process
     proc_destroy(childp);
-
-    err = copyout(kstatus, (userptr_t)status, sizeof(int));
-    if(err){
-        kfree(kstatus);
-        return err;
-    }
 
     *retval = pid;
 
@@ -182,7 +176,7 @@ int sys__exit(int exitcode){
     }*/
     //V(&pt_sem);
 
-    p->exitcode = _MKWAIT_EXIT(exitcode);
+    p->exitcode = exitcode;
     p->is_exited = true;
 
     //V(&p->p_sem);

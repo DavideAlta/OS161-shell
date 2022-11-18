@@ -116,6 +116,7 @@ common_prog(int nargs, char **args)
 {
 	struct proc *proc;
 	int result;
+	int status;
 
 	/* Create a process for the new program to run in. */
 	proc = proc_create_runprogram(args[0] /* name */);
@@ -134,7 +135,7 @@ common_prog(int nargs, char **args)
 	}
 
 	// Wait for child processes termination to no print the menu's message
-	sys_waitpid(1,NULL,0,NULL);
+	sys_waitpid(1,&status,0,&result);
 
 	/*
 	 * The new process will be destroyed when the program exits...

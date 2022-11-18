@@ -422,13 +422,12 @@ int sys_dup2(int oldfd, int newfd, int *retval){
     return 0;
 }
 
-int sys_chdir(userptr_t pathname){
+int sys_chdir(userptr_t pathname, int *retval){
 
     int err;
     struct vnode *vn = NULL;
     //char *kpathname;
-    char kpathname[PATH_MAX+1];
-    size_t path_len = 0;
+    char *kpathname;
     struct proc *p = curproc;
 
     KASSERT(curthread != NULL);
@@ -443,11 +442,10 @@ int sys_chdir(userptr_t pathname){
     }
 
     // Copy the pathname string from user to kernel space to protect it
-    path_len = strlen((char *)pathname) + 1;
-    //kpathname = kmalloc(path_len);
-    err = copyinstr(pathname, kpathname, path_len, NULL);
-    if(err)
-        return err;
+    kpathname = kstrdup((char *)pathname);
+    if(kpathname==NULL){
+        return ENOMEM;
+    }
 
     /* Obtain a vnode object associated to the passed path to set */
     err = vfs_open(kpathname, O_RDONLY, 0644, &vn);
@@ -459,6 +457,8 @@ int sys_chdir(userptr_t pathname){
     err = vfs_chdir((char *)pathname);
     if(err)
         return err;
+
+    *retval = 0;
 
     return 0;
 }

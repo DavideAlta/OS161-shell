@@ -84,7 +84,6 @@ syscall(struct trapframe *tf)
 	int32_t retval;
 	int64_t arg64, retval64;
 	int extrarg; // to get a parameter from userl-level stack
-	int status; // status of waitpid syscall
 	int err;
 
 	bool is_retval64 = false; // if the retval is on 64 bit
@@ -129,13 +128,14 @@ syscall(struct trapframe *tf)
 
 		case SYS_waitpid:
 		err = sys_waitpid((pid_t)tf->tf_a0,	// pid of process to wait for
-						  &status,			// exit status of the waited process
-						  (int)tf->tf_a1,	// options (should be 0, not implemented)
+						  (int *)tf->tf_a1,			// exit status of the waited process
+						  (int)tf->tf_a2,	// options (should be 0, not implemented)
 						  &retval);			// retval: pid of process to wait for (same of 1st arg)
 		break;
 
 		case SYS__exit:
 		err = sys__exit((int)tf->tf_a0);  // exit code
+		// retval is 0 (default)
 	    break;
 
 		case SYS_open:
@@ -191,7 +191,8 @@ syscall(struct trapframe *tf)
 		break;
 
 		case SYS_chdir:
-		err = sys_chdir((userptr_t)tf->tf_a0);		// pathname
+		err = sys_chdir((userptr_t)tf->tf_a0,		// pathname
+						&retval);
 		break;
 
 		case SYS___getcwd:
@@ -203,6 +204,7 @@ syscall(struct trapframe *tf)
 		case SYS_execv:
 		err = sys_execv((char *)tf->tf_a0,
 						(char **)tf->tf_a1);
+		// retval is 0 (default)				
 		break;
 	
 		default:
