@@ -114,6 +114,8 @@ int vfs_rename(char *oldpath, char *newpath);
 int vfs_chdir(char *path);
 int vfs_getcwd(struct uio *buf);
 
+int set_cwd(char *pathname);
+
 /*
  * Misc
  *

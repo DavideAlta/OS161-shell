@@ -125,6 +125,9 @@ vfs_chdir(char *path)
 {
 	struct vnode *vn;
 	int result;
+	char tmppath[PATH_MAX+1];
+
+	strcpy(tmppath,path);
 
 	result = vfs_lookup(path, &vn);
 	if (result) {
@@ -132,8 +135,119 @@ vfs_chdir(char *path)
 	}
 	result = vfs_setcurdir(vn);
 	VOP_DECREF(vn);
-	return result;
+	if(result){
+		return result;
+	}
+
+	set_cwd(tmppath);
+
+	return 0;
 }
+
+/*
+ * Set current directory's pathname. Change the p_cwdpath field of the proc struct.
+ * It consider both the cases: abosolute and relative paths.
+ */
+
+int
+set_cwd(char *pathname){
+
+	int len, i;
+    char tmpcwd[PATH_MAX+1], checkpath[PATH_MAX+1], tmppath[PATH_MAX+1];
+    struct proc *p = curproc;
+    char *context;
+
+	// strtok_r modifies it
+	strcpy(checkpath, pathname);
+	// 
+	strcpy(tmppath, pathname);
+	//
+	strcpy(tmpcwd,p->p_cwdpath);
+
+	// if pathname starts with "emu0:" is an absolute path
+	if(strcmp(strtok_r(checkpath,":",&context),"emu0") == 0){
+		
+		strcpy(p->p_cwdpath, tmppath);
+	
+	}else{ // if relative path
+
+		// previous directory case
+		while(strcmp(strtok_r(checkpath,"/",&context),"..") == 0){
+			// remove "../" from tmppath
+			len = strlen(tmppath);
+			for(i=0; i<=(len-3);i++){
+				tmppath[i] = tmppath[i+3];
+			}
+			tmppath[i] = 0; //null termination
+			// remove the last directory from p_cwdpath
+			len = strlen(tmpcwd);
+			i = 0;
+			while(tmpcwd[len-i] != '/'){
+				tmpcwd[len-i] = 0;
+				i++;
+			}
+			tmpcwd[len-i] = 0; // Remove also the /
+
+			// re-start from context (the right part of the string)
+			strcpy(checkpath,context);
+			if(checkpath[0] == 0){
+				// Exit condition for while loop (/ is needed to avoid strtok_r failure)
+				strcpy(checkpath,"void/");
+				//strcpy(tmppath,"emu0:")
+			}
+		}
+		// in all cases: concatenation and updating of cwd path
+		if(tmppath[0] != 0){ // no previuos directory case (tmppath has been not emptied)
+			if(!((tmppath[0] == '/') || (tmpcwd[strlen(tmpcwd)] == '/'))){
+				strcat(tmpcwd,"/");		//	emu0:	+	/
+				strcat(tmpcwd,tmppath);	//	emu0:/	+	mytest
+			}else{
+				strcat(tmpcwd,tmppath);	//	emu0:/	+	mytest (or viceversa)
+			}
+		}
+		strcpy(p->p_cwdpath,tmpcwd);
+	}
+	return 0;
+}
+
+/*
+tmpcwd	tmppath	(null)	slash?
+0		0		0		1		emu0:  /  mytest
+0		0		1		0		emu0:     null (empty because ../ case)
+0		1		0		0		emu0:     /mytest
+0		1		1		0		emu0:     null (like bove)
+1		0		0		0		emu0:/    mytest
+1		0		1		0		emu0:/    null (it is an error format)
+1		1		0		0		emu0:/    /mytest (it is an error format)
+
+=> when tmppath is null ( ../ case) slash is no needed (first if statement)
+
+tmpcwd	tmppath	slash?
+0		0		1		emu0:  /  mytest
+0		1		0		emu0:     /mytest
+1		0		0		emu0:/    mytest
+1		1		0		emu0:/    /mytest (it is an error format)
+
+This is a nor conditon: not(tmpcwd or tmppath)
+
+ALLOWED SYNTAX TO MOVE AMONG DIRECTORIES:
+---------------------------cwd = emu0: (i.e. root)
+cd emu0:/mytest
+cd /mytest
+cd mytest
+---------------------------cwd = em0:/include/kern
+../../ (to root)
+../../mytest (to root/mytest)
+TO DO: (working on vnode but not yet on string)
+/mytest (to root/mytest because before slash is automatically considered the root emu0:), see NOTA
+../.. (to root)
+.. (to include)
+
+NOTA:
+Aggiungere else if per caso /mytest
+in cui dobbiamo concatenare per avere 
+il path assoluto
+*/
 
 /*
  * Get current directory, as a pathname.
@@ -166,7 +280,7 @@ vfs_getcwd(struct uio *uio)
 	}
 	KASSERT(name != NULL);
 
-	if(strcmp(curproc->p_cwdpath,"emu0:") == 0){
+	if((strcmp(curproc->p_cwdpath,"emu0:") == 0)||(strcmp(curproc->p_cwdpath,"emu0:/") == 0)){
 		result = uiomove((char *)name, strlen(name), uio);
 		if (result) {
 			goto out;
@@ -176,7 +290,7 @@ vfs_getcwd(struct uio *uio)
 			goto out;
 		}
 	}
-	
+
 	result = VOP_NAMEFILE(cwd, uio);
 
  out:

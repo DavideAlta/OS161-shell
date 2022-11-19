@@ -424,13 +424,10 @@ int sys_dup2(int oldfd, int newfd, int *retval){
 
 int sys_chdir(userptr_t pathname, int *retval){
 
-    int err, len, i;
+    int err;
     struct vnode *vn = NULL;
-    char *kpathname, tmpcwd[PATH_MAX+1], tmppath[PATH_MAX+1];
+    char *kpathname, tmppath[PATH_MAX+1];
     struct proc *p = curproc;
-    char *context;
-    //char str[PATH_MAX] = "/";
-
     KASSERT(curthread != NULL);
     KASSERT(p != NULL );
 
@@ -448,10 +445,10 @@ int sys_chdir(userptr_t pathname, int *retval){
         return ENOMEM;
     }
 
-    strcpy(tmpcwd,p->p_cwdpath);
+    /*strcpy(tmpcwd,p->p_cwdpath);
     if(tmpcwd==NULL){
         return ENOMEM;
-    }
+    }*/
 
     // Useful because vfs_open changes the string
     strcpy(tmppath,kpathname);
@@ -469,6 +466,7 @@ int sys_chdir(userptr_t pathname, int *retval){
         return err;
     }else{ // on success copy the new pathname to p_cwdpath
 
+        /*
         strcpy(tmppath,kpathname);
 
         // if pathname starts with "emu0:" is an absolute path
@@ -497,16 +495,16 @@ int sys_chdir(userptr_t pathname, int *retval){
                 strcpy(tmppath,context);
             }
             // in all cases: concatenation and updating of cwd path
-            /*if(tmpcwd[0] != '/'){
-                strcat(str,kpathname);
-                strcat(tmpcwd,str);
+            if(tmpcwd[0] != '/'){
+                strcat(tmpcwd,"/"); // emu0: + /
+                strcat(tmpcwd,kpathname); //  emu0:/ + mytest
             }else{
                 strcat(tmpcwd,kpathname);
-            }*/
-            strcat(tmpcwd,kpathname);
+            }
             strcpy(p->p_cwdpath,tmpcwd);
-        }
 
+        }
+        */
         *retval = 0;
     }
 
