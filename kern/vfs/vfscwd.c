@@ -157,28 +157,27 @@ set_cwd(char *pathname){
     struct proc *p = curproc;
     char *context;
 
-	// strtok_r modifies it
+	// tmp variable for chekments
 	strcpy(checkpath, pathname);
-	// 
+	// tmp variable with new path
 	strcpy(tmppath, pathname);
-	//
+	// tmp variable with cwd
 	strcpy(tmpcwd,p->p_cwdpath);
 
-	// if the absolute path start with "/"
+	// if start with "/" is an absolute path starting with emu0: (concatenate it)
 	if(checkpath[0]=='/'){
-
 		strcpy(tmpcwd,"emu0:");
 		strcat(tmpcwd,pathname);
 		strcpy(p->p_cwdpath,tmpcwd);
 		
 		
 	// if pathname starts with "emu0:" is an absolute path
-	}else if(strcmp(strtok_r(checkpath,":",&context),"emu0") == 0){ // absolute path 
+	}else if(strcmp(strtok_r(checkpath,":",&context),"emu0") == 0){
 
 			strcpy(p->p_cwdpath, tmppath);
 
+	// else is relative path
 	}else{
-
 		// previous directory case
 		while(strcmp(strtok_r(checkpath,"/",&context),"..") == 0){
 			// remove "../" from tmppath
@@ -240,21 +239,16 @@ This is a nor conditon: not(tmpcwd or tmppath)
 
 ALLOWED SYNTAX TO MOVE AMONG DIRECTORIES:
 ---------------------------cwd = emu0: (i.e. root)
-cd emu0:/mytest
-cd /mytest
-cd mytest
+cd emu0:/mytest [absolute path]
+cd /mytest [absolute path: '/' is always preceded by the root "emu0:"]
+cd mytest [relative path: search "mytest" in cwd]
 ---------------------------cwd = em0:/include/kern
 ../../ (to root)
 ../../mytest (to root/mytest)
+
 TO DO: (working on vnode but not yet on string)
-/mytest (to root/mytest because before slash is automatically considered the root emu0:), see NOTA
 ../.. (to root)
 .. (to include)
-
-NOTA:
-Aggiungere else if per caso /mytest
-in cui dobbiamo concatenare per avere 
-il path assoluto
 */
 
 /*

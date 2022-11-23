@@ -227,9 +227,73 @@ int sys_execv(char *program, char **args){
     struct vnode *vn;
     struct addrspace *as;
     vaddr_t entrypoint, stackptr;
-    char **argv = args;
+    size_t arglen=0;
+    int padding=0;
 
-    (void)argv;
+    // Check arguments validity
+    if((program == NULL) || (args == NULL)) {
+		return EFAULT;
+	}
+
+    /* 1. Compute argc */
+
+    // The n. of elements of args[] is unknown but the last argument should be NULL.
+    // Compute argc = n. of valid arguments in args[]
+    int argc = 0;
+    int args_size = 0; // Total size of the argument strings
+    while(args[argc] != NULL){
+        // Accumulate the size of each args[] element
+        arglen = strlen(args[argc])+1;
+        args_size += sizeof(char)*(arglen);
+        // Compute n. of 0s for padding
+        if((arglen%4) != 0){
+            padding = 4 - arglen%4;
+            args_size += padding;
+        }
+        // The total size of the argument strings exceeeds ARG_MAX.
+        if(args_size > ARG_MAX){
+            err = E2BIG;
+            return err;
+        }
+        argc ++;
+    }
+    // Now argc contains the number of valid arguments inside args[]
+    // and arg_size contains the total size of all arguments (also considering padding zeros)
+
+    /* 2. Copy arguments from user space into a kernel buffer. */
+
+    // - Program path
+    char *kprogram = kstrdup(program);
+    if(kprogram==NULL){
+        return ENOMEM;
+    }
+
+    // - Single arguments
+    args_size += 4*(argc+1); // update the tot size with pointers dimensions
+    char *kargs = (char *)kmalloc(args_size); // array of char (= 1 byte) [kernel buffer]
+    // The starting position is over the arg pointers (each pointer is a 4bytes integer)
+    int cur_pos = 4*(argc+1); // 16 (due to 3 args + 1 null)
+    int arg_pointers[argc+1]; // Offsets of the arguments in the buffer
+    // Suppose to have these arguments: "foo\0" "hello\0" "1\0"
+    for(int i=0;i<argc;i++){
+        // Move args to kernel space
+        err = copyinstr((const_userptr_t)args[i], &kargs[cur_pos] /*(char*)(kargs+cur_pos)*/, ARG_MAX, &arglen); // arglen = 4 (foo\0) 6 (hello\0) 2 (1\0)
+        if(err){
+            return err;
+        }
+        arg_pointers[i] = cur_pos;
+        cur_pos += arglen; // cur_pos =  16 > 20 > 26 > 30
+        // if the argument string has no exactly 4 bytes '\0'-padding is needed
+        if((arglen%4) != 0){
+            // n. of bytes to pad at '\0'
+            padding = 4 - arglen%4; // padding = 2 > 2
+            for(int j=0;j<padding;j++){
+                kargs[cur_pos + j] = '\0';
+            }
+            cur_pos += padding; // cur_pos = 28 > 32
+        }
+    }
+    // Now kargs[] is the copy of args in kernel space with the proper padding
 
     /* Create a new address space and load the executable into it
      * (same of runprogram) */
@@ -268,7 +332,36 @@ int sys_execv(char *program, char **args){
 		return err;
 	}
 
-    enter_new_process(0 /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
+    // Start position of the stack
+    stackptr -= cur_pos;
+
+    // Current position of the stack
+    int stackpos;
+
+    // Copy the arguments args in the stack
+    for(int i=0;i<argc;i++){
+        // Update current position of the stack (arg_pointers behave like offsets for stackptr)
+        stackpos = stackptr + arg_pointers[i];
+        // Copy i-th element of kargs array into the stack at the computed position
+        // (the length, considering the padding, is provided by the distance between 2 offsets)
+        copyout(&kargs[i], (userptr_t)stackpos, arg_pointers[i+1]-arg_pointers[i]);
+    }
+
+    // Update the pointers array with the starting stack position
+    for(int i=0;i<argc;i++){
+        arg_pointers[i] = arg_pointers[i] + stackptr;
+    }
+    // Copy the updated pointers from kernel buffer to user stack
+    copyout(arg_pointers, (userptr_t)stackptr, 4*argc);
+    // if no work kmalloccare
+
+    // The last pointer is set to NULL
+    /*stackptr += 4*argc; 
+    *stackptr = NULL;
+    stackptr -= 4*argc;*/
+
+
+    enter_new_process(argc /*argc*/, (userptr_t)stackptr /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
 			  stackptr, entrypoint);
 

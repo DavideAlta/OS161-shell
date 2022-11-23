@@ -10,6 +10,11 @@ int main(void){
 	
     pid_t pid, pidc, pidp;
     int rv, status;
+    char *args[4];
+	args[0] = (char *)"foo";
+    args[1] = (char *)"hello!";
+    args[2] = (char *)"1";
+	args[3] = NULL;
 
     printf("sysexecv test is running...\n");
 
@@ -20,7 +25,10 @@ int main(void){
     
     }else if(pid == 0){ // Child
         pidc = getpid();
-        rv = execv("/testbin/helloworld",NULL); // try without args
+        // With args
+        rv = execv("/testbin/helloworld_args",args);
+        // Without args
+        //rv = execv("/testbin/helloworld",NULL);
         if (rv == -1){
             printf("execv failed.\n");
 		    return -1;
