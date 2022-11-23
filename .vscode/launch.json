@@ -6,7 +6,7 @@
             "type": "cppdbg",
             "request": "launch",
             "preLaunchTask": "Launch sys161",
-            "program": "${workspaceFolder}/../root/kernel",
+            "program": "${workspaceFolder}/../root/kernel-TEST2",
             "cwd": "${workspaceFolder}",
             "sourceFileMap": {
                 "../../": "${workspaceFolder}/kern"
@@ -21,7 +21,7 @@
             "name": "Compile",
             "type": "node",
             "request": "launch",
-            "preLaunchTask": "Compile already configured kernel",
+            "preLaunchTask": "Compile already configured kernel-TEST2",
             "program": "${workspaceFolder}/../root/kernel",
             "cwd": "${workspaceFolder}"
         }

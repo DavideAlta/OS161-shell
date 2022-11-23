@@ -15,7 +15,7 @@ main()
 {
 	char path1[PATH_MAX+1], *p;
 	char path2[PATH_MAX+1];
-	//char newpath[7] = "/mytest";
+	char newpath[13] = "emu0:/mytest";
 	int rv;
 
 	
@@ -30,7 +30,7 @@ main()
 
 	printf("The current dir is %s\n",path1);
 
-	rv = chdir("mytest");
+	rv = chdir(newpath);
 	if(rv == -1){
 		printf("chdir failed.\n");
 		return -1;

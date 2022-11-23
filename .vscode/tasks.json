@@ -33,7 +33,7 @@
                 "showReuseMessage": true,
                 "clear": true,
             },
-            "command": "sys161 -w kernel",
+            "command": "sys161 -w kernel-TEST2",
             "options": {
                 "cwd": "${workspaceFolder}/../root/"
             },

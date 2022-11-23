@@ -164,12 +164,20 @@ set_cwd(char *pathname){
 	//
 	strcpy(tmpcwd,p->p_cwdpath);
 
-	// if pathname starts with "emu0:" is an absolute path
-	if(strcmp(strtok_r(checkpath,":",&context),"emu0") == 0){
+	// if the absolute path start with "/"
+	if(checkpath[0]=='/'){
+
+		strcpy(tmpcwd,"emu0:");
+		strcat(tmpcwd,pathname);
+		strcpy(p->p_cwdpath,tmpcwd);
 		
-		strcpy(p->p_cwdpath, tmppath);
-	
-	}else{ // if relative path
+		
+	// if pathname starts with "emu0:" is an absolute path
+	}else if(strcmp(strtok_r(checkpath,":",&context),"emu0") == 0){ // absolute path 
+
+			strcpy(p->p_cwdpath, tmppath);
+
+	}else{
 
 		// previous directory case
 		while(strcmp(strtok_r(checkpath,"/",&context),"..") == 0){
