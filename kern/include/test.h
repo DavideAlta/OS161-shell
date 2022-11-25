@@ -98,7 +98,7 @@ int kmalloctest4(int, char **);
 int nettest(int, char **);
 
 /* Routine for running a user-level program. */
-int runprogram(char *progname);
+int runprogram(char *progname, char** args);
 
 /* Open the console files: STDIN, STDOUT and STDERR. */
 int console_init(struct proc *proc);

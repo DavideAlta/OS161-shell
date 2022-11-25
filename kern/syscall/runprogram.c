@@ -46,6 +46,8 @@
 #include <syscall.h>
 #include <test.h>
 #include <openfile.h>
+#include <copyinout.h>
+#include <limits.h>
 
 /*
  * Load program "progname" and start running it in usermode.
@@ -54,16 +56,59 @@
  * Calls vfs_open on progname and thus may destroy it.
  */
 int
-runprogram(char *progname)
+runprogram(char *progname, char** args)
 {
+
+	//from menu.c we know that the size of args is 2 and
+	//args[0] = progname 
+	//args[1] = useful arg
+
 	struct addrspace *as;
 	struct vnode *v;
 	vaddr_t entrypoint, stackptr;
 	int result;
 	struct proc *p = curproc;
+	int err;
+
+	//variable for args management 
+	size_t arglen = 0;
+	int args_size = 0;
+	int padding = 0;
+	char **kargs;
+	//char *kargs_ptr;
+	//char *kargs_ptr_start;
+
+	char *karg1;
+	karg1 = kstrdup(args[1]);
+
+	/* 1. padding for 1 element */
+
+	arglen = strlen(args[1])+1;
+	args_size = sizeof(char)*(arglen);
+	// Compute n. of 0s for padding (if needed)
+	if((arglen%4) != 0){
+		padding = 4 - arglen%4;
+		arglen += padding;
+	}
+	// The total size of the argument strings exceeeds ARG_MAX.
+	if(args_size > ARG_MAX){
+		err = E2BIG;
+		return err;
+	}
+
+	/* 2. copy argument from user to kernel*/
+
+	char *kprogram = kstrdup(progname);
+	if(kprogram==NULL){
+        return ENOMEM;
+    }
+	
+
+	/* 3. Create a new address space and load the executable into it
+     * (same of runprogram) */
 
 	/* Open the file. */
-	result = vfs_open(progname, O_RDONLY, 0, &v);
+	result = vfs_open(kprogram, O_RDONLY, 0, &v);
 	if (result) {
 		return result;
 	}
@@ -106,10 +151,23 @@ runprogram(char *progname)
 		return result;
 	}
 
+
+	/* 4.  we have to pass the recived stack moving  */
+
+	stackptr -= arglen;
+
+	kargs = (char**) (stackptr - 2*sizeof(char*));
+	memcpy((char*)stackptr, karg1, arglen);
+	kargs[0] = (char*)stackptr;
+	kargs[1] = NULL;
+	
+
+
+
 	/* Warp to user mode. */
-	enter_new_process(0 /*argc*/, NULL /*userspace addr of argv*/,
+	enter_new_process(1 /*argc*/, (userptr_t)kargs /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
-			  stackptr, entrypoint);
+			  (vaddr_t)kargs, entrypoint);
 
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");

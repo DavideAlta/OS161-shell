@@ -56,8 +56,8 @@ main(int argc, char *argv[])
 		warnx("No arguments - running on \"testfile\"");
 		file = "testfile";
 	}
-	else if (argc == 2) {
-		file = argv[1];
+	else if (argc == 1) {
+		file = argv[0];
 	}
 	else {
 		errx(1, "Usage: filetest <filename>");

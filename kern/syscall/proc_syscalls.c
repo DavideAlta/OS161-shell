@@ -361,7 +361,7 @@ int sys_execv(char *program, char **args){
 
     // Update the pointers in the kernel buffer with the starting stack position
     for(int i=0;i<argc;i++){
-        kargs[i] = kargs[i] - kargs_ptr_start + (char *)stackptr;
+        kargs[i] = kargs[i] - kargs_ptr_start + (char *)stackptr + sizeof(char*)*(argc+1);
     }
 
     // Copy the whole kernel buffer into user stack
