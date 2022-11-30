@@ -111,7 +111,7 @@ int sys_open(userptr_t filename, int flags, int *retval){
     of_tmp->of_refcount = 1;
     of_tmp->of_sem = sem_create("sem_file",1);
 
-    // If append mode: the offset is equal to the file size
+    // If append mode: the offset is equal to the file size (-1 for the EOF)
     if(append_mode){
         struct stat statbuf;
         // Get the file size by vnode object
@@ -121,7 +121,7 @@ int sys_open(userptr_t filename, int flags, int *retval){
 			of_tmp = NULL;
 			return err;
 		}
-		of_tmp->of_offset = statbuf.st_size;
+		of_tmp->of_offset = statbuf.st_size - 1; 
     }
 
     // Load the full openfile inside the filetable
