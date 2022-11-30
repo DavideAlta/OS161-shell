@@ -50,14 +50,13 @@ int sys_open(userptr_t filename, int flags, int *retval){
 
     // - Flags
     switch(flags){
-        // TO DO: VERIFICARE TUTTE LE COMBINAZIONI DEI FLAG
         case O_RDONLY: break;
         case O_WRONLY: break;
         case O_RDWR: break;
         // Create the file if it doesn't exist (handled by vfs_open())
         case O_CREAT|O_WRONLY: break;
         case O_CREAT|O_RDWR: break;
-        // Create the file if it doesn't exist, fails if doesn't exist (handled by vfs_open())
+        // Create the file if it doesn't exist, fails if already exist (handled by vfs_open())
         case O_CREAT|O_EXCL|O_WRONLY: break;
         case O_CREAT|O_EXCL|O_RDWR: break;
         // Truncate the file to length 0 upon open (handled by vfs_open())

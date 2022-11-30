@@ -12,7 +12,7 @@ SUBDIRS=add argtest badcall bigexec bigfile bigfork bigseek bloat conman \
 	randcall redirect rmdirtest rmtest \
 	sbrktest schedpong sort sparsefile tail tictac triplehuge \
 	triplemat triplesort usemtest zero \
-	sysfork sysexecv syswait sysfiletest \
+	sysfork test_execv test_process test_file_rw \
 	sysfiletest2 sysfiletest3 helloworld helloworld_args
 
 # But not:

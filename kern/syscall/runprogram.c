@@ -151,7 +151,6 @@ runprogram(char *progname, char** args)
 		return result;
 	}
 
-
 	/* 4.  we have to pass the recived stack moving  */
 
 	stackptr -= arglen;
@@ -161,9 +160,6 @@ runprogram(char *progname, char** args)
 	kargs[0] = (char*)stackptr;
 	kargs[1] = NULL;
 	
-
-
-
 	/* Warp to user mode. */
 	enter_new_process(1 /*argc*/, (userptr_t)kargs /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,

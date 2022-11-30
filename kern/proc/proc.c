@@ -228,18 +228,6 @@ proc_destroy(struct proc *proc)
 
 	kfree(proc->p_name);
 
-	// Destroy the added features of the proc struct TODO
-	/*kfree(&proc->p_pid);
-	kfree(&proc->p_parentpid);
-	kfree(&proc->exitcode);
-	kfree(&proc->is_exited);
-	kfree(&proc->is_waiting);
-
-	sem_destroy(&proc->p_sem);
-	sem_destroy(&proc->p_waitsem);
-
-	*/
-
 	kfree(proc);
 }
 
