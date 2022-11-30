@@ -25,14 +25,16 @@
 
 int sys_open(userptr_t filename, int flags, int *retval){
 
+    int fd, err = 0, append_mode = 0;
     struct vnode *vn = NULL;
-    struct proc *p = curproc; // useful for debug
-    int err = 0;
-    int append_mode = 0;
-    int fd;
-    char *kfilename; // filename string inside kernel space
+    struct proc *p = curproc;
     struct openfile *of_tmp;
-    //size_t filename_len=0;
+
+    char *kfilename; // filename string inside kernel space
+
+    // Check if the current thread and the associated process are no NULL
+    KASSERT(curthread != NULL);
+    KASSERT(curproc != NULL);
     
     // Check arguments validity :
     
@@ -48,18 +50,18 @@ int sys_open(userptr_t filename, int flags, int *retval){
         return ENOMEM;
     }
 
-    // - Flags
+    // - Flags (all handled by vfs_open except for O_APPEND)
     switch(flags){
         case O_RDONLY: break;
         case O_WRONLY: break;
         case O_RDWR: break;
-        // Create the file if it doesn't exist (handled by vfs_open())
+        // Create the file if it doesn't exist
         case O_CREAT|O_WRONLY: break;
         case O_CREAT|O_RDWR: break;
-        // Create the file if it doesn't exist, fails if already exist (handled by vfs_open())
+        // Create the file if it doesn't exist, fails if already exist
         case O_CREAT|O_EXCL|O_WRONLY: break;
         case O_CREAT|O_EXCL|O_RDWR: break;
-        // Truncate the file to length 0 upon open (handled by vfs_open())
+        // Truncate the file to length 0 upon open
         case O_TRUNC|O_WRONLY: break;
         case O_CREAT|O_TRUNC|O_WRONLY: break;
         case O_TRUNC|O_RDWR: break;
@@ -77,19 +79,15 @@ int sys_open(userptr_t filename, int flags, int *retval){
             break;
     }
 
-    // Check if the current thread and the associated process are no NULL
-    KASSERT(curthread != NULL);
-    KASSERT(curproc != NULL);
-
     // Obtain a vnode object associated to the passed file to open
     err = vfs_open(kfilename, flags, 0664, &vn);
     if(err)
         return err;
-    
-    // Find the index of the first free slot of the file table
 
+    // Process's semaphore to protect the process's file table
     P(&p->p_sem);
 
+    // Search the first free slot of the file table, it will be the file descriptor
     int i = STDERR_FILENO + 1;
     while((p->p_filetable[i] != NULL) && (i < OPEN_MAX)){
         i++;
@@ -102,7 +100,7 @@ int sys_open(userptr_t filename, int flags, int *retval){
         fd = i;
     }
 
-    // Allocate and fill the found openfile struct
+    // Allocate and fill properly the openfile struct
     of_tmp = (struct openfile *)kmalloc(sizeof(struct openfile));
 
     of_tmp->of_offset = 0;
@@ -124,14 +122,14 @@ int sys_open(userptr_t filename, int flags, int *retval){
 		of_tmp->of_offset = statbuf.st_size - 1; 
     }
 
-    // Load the full openfile inside the filetable
+    // Load the filled openfile inside the filetable at the found position
     p->p_filetable[fd] = of_tmp;
-    // Check if the filetable is no more NULL
+    // Check if the position is no more NULL
     KASSERT(p->p_filetable[fd] != NULL);
 
     V(&p->p_sem);
 
-    // fd (i.e. retval) = Place of openfile inside the file table
+    // Return the place of openfile inside the file table (file descriptor)
     *retval = fd;
 
     return 0;

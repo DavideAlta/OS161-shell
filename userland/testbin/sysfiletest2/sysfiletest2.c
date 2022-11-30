@@ -1,5 +1,7 @@
 /*
- * sysfiletest2.c
+ * test_file_duplseek.c - it ...
+ *
+ * (test of open, read, close, dup2, lseek)
  */
 
 #include <stdio.h>
