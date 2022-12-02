@@ -144,7 +144,7 @@ main()
 		return -1;
 	}
 
-	// Write the opened file (buf will be appended -> "Hello!Hello again!")
+	// Write the opened file (after trunc)
 	rv = write(fd, writebuf3, 12);
 	if (rv<0) {
 		printf("File write (trunc) failed.\n");

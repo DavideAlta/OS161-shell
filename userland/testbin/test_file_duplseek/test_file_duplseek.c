@@ -1,5 +1,8 @@
 /*
- * test_file_duplseek.c - it ...
+ * test_file_duplseek.c - it test dup2 and lseek:
+ *						  1) dup2 duplicate fd
+ *						  2) lseek move the offset using 
+ *							 the cloned file descriptor.		
  *
  * (test of open, read, close, dup2, lseek)
  */
@@ -8,6 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <err.h>
+#include <errno.h>
 
 int
 main()
@@ -25,13 +29,15 @@ main()
 	fd = open(file_rd, O_RDONLY);
 	if (fd<0) {
 		printf("File open rd failed.\n");
-		return -1;
+		printf("Error: %s\n",strerror(errno));
+		return fd;
 	}
 
 	rv = read(fd, readbuf1, 8);
 	if (rv<0) {
 		printf("File read 1 failed.\n");
-		return -1;
+		printf("Error: %s\n",strerror(errno));
+		return rv;
 	}
 
     /* ensure null termination */
@@ -39,28 +45,34 @@ main()
 
     printf("1st reading = %s\n",readbuf1);
 
+	// duplicate the file descriptor 
     rv = dup2(fd, fd_clone);
     if (rv != fd_clone){
         printf("dup2 failed.\n");
-        return -1;
-    }
+        printf("Error: %s\n",strerror(errno));
+		return rv;
+	}
 
     rv = lseek(fd, -10, SEEK_END);
-    if(rv != 12){ // 22 - 10
+    if(rv != 17){ // 27 - 10
         printf("lseek failed.\n");
-        return -1;
+        printf("Error: %s\n",strerror(errno));
+		return rv;
     }
 
     rv = close(fd);
 	if (rv<0) {
 		printf("File close rd failed.\n");
-		return -1;
+		printf("Error: %s\n",strerror(errno));
+		return rv;
 	}
     
+	// the file isn't close since fd_clone still point to it 
     rv = read(fd_clone, readbuf2, 8);
     if (rv<0) {
 		printf("File read 2 failed.\n");
-		return -1;
+		printf("Error: %s\n",strerror(errno));
+		return rv;
 	}
 
     /* ensure null termination */
@@ -71,10 +83,11 @@ main()
     rv = close(fd_clone);
 	if (rv<0) {
 		printf("File close rd failed.\n");
-		return -1;
+		printf("Error: %s\n",strerror(errno));
+		return rv;
 	}
 
-    printf("THE END !!!\n");
+    printf("Test complete successfully\n");
 
 	return 0;
 }
