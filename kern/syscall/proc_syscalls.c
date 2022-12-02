@@ -26,7 +26,7 @@
 int sys_fork(struct trapframe *tf, pid_t *retval){
 
     int err;
-    struct proc *p = curproc; // parent process (i.e. calling one)
+    struct proc *p = curproc; // parent process
     struct proc *childproc = NULL;
     struct trapframe *childtf;
 
@@ -44,8 +44,6 @@ int sys_fork(struct trapframe *tf, pid_t *retval){
         err = ENOMEM;
         return err;
     }
-
-    // TODO: Bloccare proctable con un semaforo ?
 
     // Child inherits the cwd by parent
     childproc->p_cwd = p->p_cwd;
@@ -68,7 +66,7 @@ int sys_fork(struct trapframe *tf, pid_t *retval){
     }
     *childtf = *tf;
 
-    // Copy parent's filetable
+    // Copy parent's filetable (using each file semaphore)
     for(int i=0;i<OPEN_MAX;i++) {
 		if(p->p_filetable[i] != NULL){
 			P(p->p_filetable[i]->of_sem);
@@ -111,18 +109,16 @@ int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
     struct proc *p = curproc;
     struct proc *childp;
 
-    // Get child process from global proctable
+    // Get child process from proctable
     P(&pt_sem);
     childp = proctable[pid];
     V(&pt_sem);
 
-    (void)options;
-
-    // The options argument requested invalid or unsupported options.
-    /*if(options != 0){
+    // The options argument is not required (i.e. should be 0)
+    if(options != 0){
         err = EINVAL;
         return err;
-    }*/
+    }
 
     // The pid argument named a nonexistent process
     if(childp == NULL){
@@ -136,9 +132,7 @@ int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
         return err;
     }
 
-    // proctable[p->p_pid]->is_waiting = true;
-
-    // Parent process waits for child one if it is no exited
+    // Parent process waits for child one, if it is no exited
     if(!(childp->is_exited)){
         P(&childp->p_waitsem); 
     }   
@@ -146,9 +140,6 @@ int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
     *status = childp->exitcode;
     //TO DO: _MKWAIT_EXIT()
 
-    // Remove the current thread
-    // (otherwise proc_destroy exits with error numthreads != 0)
-    //proc_remthread(curthread);
     // Destroy the pid process
     proc_destroy(childp);
 
@@ -159,59 +150,24 @@ int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
 
 int sys__exit(int exitcode){
 
-    //int i = 0;
     struct proc *p = curproc;
-    //struct proc **pt = proctable;
-
-    //P(&p->p_sem);
-
     pid_t pid = p->p_pid;
-    //pid_t ppid = p->p_parentpid;
 
-    // TODO: chiusura file se ce n'è aperti
-
-    // Check the presence of curproc in proctable
-    //P(&pt_sem);
-    /*while((proctable[i]->p_pid != pid) && (i < MAX_PROCESSES)){
-        i++;
-    }
-    if(i == MAX_PROCESSES){
-        return 0;
-    }*/
-    //V(&pt_sem);
-
+    // Store the passed exit code (readable by sys_waitpid)
     p->exitcode = exitcode;
+
+    // Current process is ready to exit
     p->is_exited = true;
 
-    //V(&p->p_sem);
-
-    /*if(proctable[ppid]->is_waiting){
-        // Signal the semaphore for waitpid
-        V(&p->p_waitsem);
-
-    }else{
-        // Remove the current thread
-        // (otherwise proc_destroy exits with error numthreads != 0)
-        proc_remthread(curthread);
-
-        // Destroy the pid process
-        proc_destroy(proctable[pid]);
-
-        // pid is now available
-        proctable[pid] = NULL;
-
-    }*/
-    
-    // pid is now available
-    //P(&pt_sem);
-    //proctable[pid] = NULL;
-    //V(&pt_sem);
-    V(&p->p_waitsem);
-    // Cause the current thread to exit
-    //proc_remthread(curthread); //o qui o dentro thread_exit TODO
-    //proc_destroy(proctable[pid]);
+    // Process table is free
     proctable[pid] = NULL;
-    thread_exit(); // is zombie (pointer is NULL but proc is still in memory)
+
+    // Signal sys_waitpid() calling process that its child is exited
+    V(&p->p_waitsem);
+
+    // Causes the current thread to exit by detaching it from process.
+    // The process is made zombie (waiting for its removal but still in memory)
+    thread_exit();
 
     return 0;
 }

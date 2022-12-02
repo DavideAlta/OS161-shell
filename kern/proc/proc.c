@@ -65,19 +65,18 @@ struct proc *proctable[MAX_PROCESSES];
 /*Counter of active processes*/
 int proc_counter;
 
-/**/
+/*Semaphore for the process table*/
 struct semaphore pt_sem;
 
 /*
  * Create a proc structure.
  */
-//static TO DO: A COSA SERVE?
 struct proc *
 proc_create(const char *name)
 {
 	struct proc *proc;
 	pid_t pid = 0; // index of the process table
-	struct semaphore *semw, *semp, *sempt; // to define the semaphores
+	struct semaphore *semw, *semp, *sempt; // temporary variables to define the semaphores
 
 	proc = kmalloc(sizeof(*proc));
 	if (proc == NULL) {
@@ -103,29 +102,31 @@ proc_create(const char *name)
 		proc->p_filetable[fd] = NULL;
 	}
 
-	/* At the first process...*/
+	/* At the first process (named [kernel])...*/
 	if(strcmp(name,"[kernel]") == 0){
 		proc->p_pid = 0;
 		proc->p_parentpid = 0;
-		//*proctable = kmalloc(sizeof(*proctable));
 		proctable[0] = proc;
 		proc_counter = 1;
 		/*Initialize the process table*/
 		for(int i=1;i<MAX_PROCESSES;i++){
 			proctable[i] = NULL;
 		}
-		/*Initializ the process table's semaphore*/
+		/*Initialize the process table's semaphore*/
 		sempt = sem_create("pt_sem",1);
 		pt_sem = *sempt;
 	/*At the other processes...*/
 	}else{
+		/*Search the first free pid*/
 		while(proctable[pid] != NULL){
 			pid++;
 		}
 		proc->p_pid = pid;
+		/*The parent is the first process (kernel)*/
 		if(pid == 1){
 			proc->p_parentpid = 0;
 		}
+		
 		proctable[pid] = proc;
 		proc_counter++;
 	}
