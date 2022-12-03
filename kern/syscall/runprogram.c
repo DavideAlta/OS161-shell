@@ -59,9 +59,11 @@ int
 runprogram(char *progname, char** args)
 {
 
-	//from menu.c we know that the size of args is 2 and
-	//args[0] = progname 
-	//args[1] = useful arg
+	/*
+	 * from menu.c we know that the size of args is 2
+	 * 		args[0] = progname 
+	 * 		args[1] = useful arg
+    */
 
 	struct addrspace *as;
 	struct vnode *v;
@@ -70,19 +72,15 @@ runprogram(char *progname, char** args)
 	struct proc *p = curproc;
 	int err;
 
-	//variable for args management 
+	// Variables for args management 
+
 	size_t arglen = 0;
 	int args_size = 0;
 	int padding = 0;
 	char **kargs;
-	//char *kargs_ptr;
-	//char *kargs_ptr_start;
-
 	char *karg1;
-	karg1 = kstrdup(args[1]);
 
-	/* 1. padding for 1 element */
-
+	/* 1. Compute the argument size (considering the padding) */
 	arglen = strlen(args[1])+1;
 	args_size = sizeof(char)*(arglen);
 	// Compute n. of 0s for padding (if needed)
@@ -96,16 +94,18 @@ runprogram(char *progname, char** args)
 		return err;
 	}
 
-	/* 2. copy argument from user to kernel*/
+	/* 2. Copy from user to kernel */
 
+	// - The single argument
+	karg1 = kstrdup(args[1]);
+
+	// - The program name
 	char *kprogram = kstrdup(progname);
 	if(kprogram==NULL){
         return ENOMEM;
     }
-	
 
-	/* 3. Create a new address space and load the executable into it
-     * (same of runprogram) */
+	/* 3. Create a new address space and load the executable into it */
 
 	/* Open the file. */
 	result = vfs_open(kprogram, O_RDONLY, 0, &v);
@@ -145,20 +145,20 @@ runprogram(char *progname, char** args)
 		return result;
 	}
 
-	/* Open the console files: STDIN, STDOUT and STDERR */
+	/* 4. Copy the argument from kernel to user stack */
+
+	stackptr -= arglen; // computed at step 1
+
+	kargs = (char**)(stackptr - 2*sizeof(char*));
+	memcpy((char*)stackptr, karg1, arglen);
+	kargs[0] = (char*)stackptr;
+	kargs[1] = NULL;
+
+	// Open the console files: STDIN, STDOUT and STDERR
 	console_init(p);
 	if(result){
 		return result;
 	}
-
-	/* 4.  we have to pass the recived stack moving  */
-
-	stackptr -= arglen;
-
-	kargs = (char**) (stackptr - 2*sizeof(char*));
-	memcpy((char*)stackptr, karg1, arglen);
-	kargs[0] = (char*)stackptr;
-	kargs[1] = NULL;
 	
 	/* Warp to user mode. */
 	enter_new_process(1 /*argc*/, (userptr_t)kargs /*userspace addr of argv*/,
@@ -179,11 +179,12 @@ console_init(struct proc *proc)
 	struct vnode *v_stdin, *v_stdout, *v_stderr;
 	int result;
 	char *kconsole = (char *)kmalloc(5);
-	struct openfile *of_tmp; // support openfile object
+	struct openfile *of_tmp;
 	of_tmp = kmalloc(sizeof(struct openfile));
 
 	strcpy(kconsole,"con:");
-	
+
+	/* Load STDIN openfile inside the file table */	
 	result = vfs_open(kconsole, O_RDONLY, 0664, &v_stdin);
 	if (result) {
 		return result;
@@ -201,6 +202,7 @@ console_init(struct proc *proc)
 
 	strcpy(kconsole,"con:"); // because vfs_open modify the name string
 
+	/* Load STDOUT openfile inside the file table */	
 	result = vfs_open(kconsole, O_WRONLY, 0664, &v_stdout);
 	if (result) {
 		return result;
@@ -218,6 +220,7 @@ console_init(struct proc *proc)
 
 	strcpy(kconsole,"con:");
 
+	/* Load STDERR openfile inside the file table */	
 	result = vfs_open(kconsole, O_WRONLY, 0664, &v_stderr);
 	if (result) {
 		return result;

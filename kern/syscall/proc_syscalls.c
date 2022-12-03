@@ -23,6 +23,9 @@
 #include <vm.h>
 #include <mips/trapframe.h>
 
+/*
+ * Duplicates the currently running process.
+ */
 int sys_fork(struct trapframe *tf, pid_t *retval){
 
     int err;
@@ -91,6 +94,9 @@ int sys_fork(struct trapframe *tf, pid_t *retval){
     return 0;
 }
 
+/*
+ * Returns the process id of the current process.
+ */
 int sys_getpid(pid_t *retval){
 
     struct proc *p = curproc;
@@ -104,6 +110,10 @@ int sys_getpid(pid_t *retval){
     return 0;
 }
 
+/*
+ * Wait for the process specified by pid to exit,
+ * and return an encoded exit status in the integer pointed to by status.
+*/
 int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
     int err;
     struct proc *p = curproc;
@@ -138,7 +148,6 @@ int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
     }   
 
     *status = childp->exitcode;
-    //TO DO: _MKWAIT_EXIT()
 
     // Destroy the pid process
     proc_destroy(childp);
@@ -148,6 +157,9 @@ int sys_waitpid(pid_t pid, int *status, int options, pid_t *retval){
     return 0;
 }
 
+/*
+ * Causes the current process to exit.
+ */
 int sys__exit(int exitcode){
 
     struct proc *p = curproc;
@@ -173,10 +185,10 @@ int sys__exit(int exitcode){
 }
 
 /*
- * sys_execv() is very similar to runprogram() but with some modifications
- * Since runprogram() loads a program and start running it in usermode
-*/
-
+ * Replaces the currently executing program with a newly loaded program image.
+ * Note: It is very similar to runprogram() (that loads a program and start running it in usermode)
+ *       but with some modifications about the arguments passing
+ */
 int sys_execv(char *program, char **args){
 
     int err, argc=0, padding=0;
@@ -185,7 +197,7 @@ int sys_execv(char *program, char **args){
     struct addrspace *as;
     vaddr_t entrypoint, stackptr;
     size_t arglen=0;
-    char **kargs; // To move inside kernel buffer (string by string) -> i.e. kernel buffer
+    char **kargs; // Kernel buffer
     char *kargs_ptr; // To move inside kernel buffer (char by char)
     char *kargs_ptr_start; // Starting position of arguments inside kernel buffer
 
