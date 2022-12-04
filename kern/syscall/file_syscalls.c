@@ -326,8 +326,6 @@ int sys_lseek(int fd, off_t pos, int whence, int64_t *retval){
     // Retrieve the file size to can use it then
 	err = VOP_STAT(of->of_vnode, &statbuf);
 	if (err){
-        //kfree(curproc->p_filetable[fd]);
-        //curproc->p_filetable[fd] = NULL;
         return err;
     }else{
         filesize = statbuf.st_size;
@@ -345,8 +343,7 @@ int sys_lseek(int fd, off_t pos, int whence, int64_t *retval){
             offset =  filesize + pos;
         break;
 
-        default:
-            // whence is invalid
+        default: // whence is invalid
             err = EINVAL;
             return err;
         break;
@@ -363,6 +360,7 @@ int sys_lseek(int fd, off_t pos, int whence, int64_t *retval){
 
     V(of->of_sem);
 
+    // Return the new offset
     *retval = offset;
 
     return 0;
@@ -406,6 +404,7 @@ int sys_dup2(int oldfd, int newfd, int *retval){
     curproc->p_filetable[oldfd]->of_refcount++;
     V(oldof->of_sem);
 
+    // Return the new (cloned) file descriptor
     *retval = newfd;
 
     return 0;
@@ -420,9 +419,9 @@ int sys_chdir(userptr_t pathname, int *retval){
     KASSERT(curthread != NULL);
     KASSERT(p != NULL );
 
-    // Check argument
+    // Check argument:
 
-    // pathname was an invalid pointer.
+    // - pathname was an invalid pointer.
     if(pathname == NULL){
         err = EFAULT;
         return err;
@@ -434,106 +433,52 @@ int sys_chdir(userptr_t pathname, int *retval){
         return ENOMEM;
     }
 
-    /*strcpy(tmpcwd,p->p_cwdpath);
-    if(tmpcwd==NULL){
-        return ENOMEM;
-    }*/
-
     // Useful because vfs_open changes the string
     strcpy(tmppath,kpathname);
     if(tmppath==NULL){
         return ENOMEM;
     }
-    /* Obtain a vnode object associated to the passed path to set */
+
+    // Obtain a vnode object associated to the passed path to set
     err = vfs_open(tmppath, O_RDONLY, 0644, &vn);
     if(err)
         return err;
 
-    /* Do curproc->p_cwd = vn (spinlock handling is inside vfs_setcurdir)*/
+    // Set the p_cwd vnode with the new one (together to pathname string p_cwdpath)
     err = vfs_chdir((char *)pathname);
     if(err){
         return err;
-    }else{ // on success copy the new pathname to p_cwdpath
-
-        /*
-        strcpy(tmppath,kpathname);
-
-        // if pathname starts with "emu0:" is an absolute path
-        if(strcmp(strtok_r(tmppath,":",&context),"emu0") == 0){
-            
-            strcpy(p->p_cwdpath, kpathname);
-        
-        }else{ // if relative path
-
-            // previous directory case
-            while(strcmp(strtok_r(tmppath,"/",&context),"..") == 0){
-                // remove "../" from kpathname
-                len = strlen(kpathname);
-                for(i=0; i<=(len-3);i++){
-                    kpathname[i] = kpathname[i+3];
-                }
-                kpathname[i] = 0; //null termination
-                // remove the last directory from p_cwdpath
-                len = strlen(tmpcwd);
-                i = 0;
-                while(tmpcwd[len-i] != '/'){
-                    tmpcwd[len-i] = 0;
-                    i++;
-                }
-                // re-start from context (the right part of the string)
-                strcpy(tmppath,context);
-            }
-            // in all cases: concatenation and updating of cwd path
-            if(tmpcwd[0] != '/'){
-                strcat(tmpcwd,"/"); // emu0: + /
-                strcat(tmpcwd,kpathname); //  emu0:/ + mytest
-            }else{
-                strcat(tmpcwd,kpathname);
-            }
-            strcpy(p->p_cwdpath,tmpcwd);
-
-        }
-        */
+    }else{ 
         *retval = 0;
     }
 
     return 0;
 }
 
-/* Example for previous directory case:
-
-emu0: > mytest > pippo
-      > yourtest
-p_cwdpath   emu0:/mytest/pippo
-kpathname      ../../yourtest
-emu0:/ + yourtest
-new p_cwdpath   emu0:/yourtest
-*/
-
 int sys___getcwd(userptr_t buf, size_t buflen, int *retval){
 
     int err;
     struct iovec iov;
     struct uio u;
-    //char kbuf[PATH_MAX+1]; // buffer inside kernel space
 
     KASSERT(curthread != NULL);
     KASSERT(curproc != NULL );
 
-    // Check arguments
+    // Check argument:
 
-    // buf points to an invalid address.
+    // - buf points to an invalid address.
     if(buf == NULL){
         err = EFAULT;
         return err;
     }
 
-    /* Setup the uio record (use a proper function to init all fields) */
+    // Setup the uio record (use a proper function to init all fields)
 	uio_uinit(&iov, &u, buf, buflen, 0, UIO_READ);
     u.uio_space = curproc->p_addrspace;
 	u.uio_segflg = UIO_USERSPACE; // for user space address
 
     // Retrieve the uio struct associated with the current directory
+    // (containing vnode and string with pathname)
     err = vfs_getcwd(&u);
     if(err)
         return err;
@@ -541,22 +486,9 @@ int sys___getcwd(userptr_t buf, size_t buflen, int *retval){
     // Actual lenght of the current pathname directory is returned
     *retval = buflen - u.uio_resid;
 
-    /*[ | | | ] buflen 4
-    [c|i|a| ] resid 0
-    rivedere retval
-    */
-
-    // 
     if(*retval < 0){
         err = EFAULT;
     }
-
-    // Copy the buffer from kernel to user space to make it available for the user
-    /*err = copyout(kbuf, buf, buflen);
-    if(err){
-        kfree(kbuf);
-        return err;
-    }*/
 
     return 0;
 }
