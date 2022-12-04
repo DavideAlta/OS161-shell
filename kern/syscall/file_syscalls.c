@@ -119,7 +119,7 @@ int sys_open(userptr_t filename, int flags, int *retval){
 			of_tmp = NULL;
 			return err;
 		}
-		of_tmp->of_offset = statbuf.st_size - 1; 
+		of_tmp->of_offset = statbuf.st_size - 1; // -1 to set position on EOF char
     }
 
     // Load the filled openfile inside the filetable at the found position
@@ -137,23 +137,14 @@ int sys_open(userptr_t filename, int flags, int *retval){
 
 int sys_write(int fd, userptr_t buf, size_t buflen, int *retval){
     
-    int err;
-    //char kbuf[PATH_MAX];
-    int offset; // tmp
+    int err, offset;
     struct iovec iov;
     struct uio u;
-    struct openfile *of; // tmp
-    struct proc *p = curproc; // tmp
+    struct openfile *of;
+    struct proc *p = curproc;
 
     KASSERT(curthread != NULL);
     KASSERT(curproc != NULL );
-
-    // Copy the buffer from user to kernel space
-    /*err = copyinstr(buf, kbuf, sizeof(kbuf), NULL);
-    if(err){
-        kfree(kbuf);
-        return err;
-    }*/
 
     of = p->p_filetable[fd];
 
@@ -176,6 +167,7 @@ int sys_write(int fd, userptr_t buf, size_t buflen, int *retval){
         return err;
     }
 
+    // Store the offset before writing
     offset = of->of_offset;
 
     // Setup the uio record (use a proper function to init all fields)
@@ -183,35 +175,33 @@ int sys_write(int fd, userptr_t buf, size_t buflen, int *retval){
     u.uio_space = p->p_addrspace;
 	u.uio_segflg = UIO_USERSPACE; // for user space address
 
-    /*VOP_WRITE - Write data from uio to file at offset specified
-                  in the uio, updating uio_resid to reflect the
-                  amount written, and updating uio_offset to match.*/
+    // Write data from uio to file at offset specified in the uio
+    // updating uio_offset that will be at EOF position
 	err = VOP_WRITE(of->of_vnode, &u);
 	if (err){
 		return err;
     }
 
-    // offset update
+    // Offset update
     of->of_offset = u.uio_offset;
-    // of->of_offset += u.uio_resid;
 
     // Synchronization of writing operations
     V(of->of_sem);
 
-    // uio_resid is the amount written => retval
-    *retval = u.uio_resid;
+    // write returns the amount actually written =
+    // = offset after the writing - offset before writing (-1 due to EOF)
+    *retval = u.uio_offset - offset - 1;
 
     return 0;
 }
 
 int sys_read(int fd, userptr_t buf, size_t size, int *retval)
 {
-    int err;
-    int offset; // temporary variable to store the openfile field
+    int err, offset;
     struct iovec iov;
     struct uio u;
-    struct openfile *of; // tmp
-    struct proc *p = curproc; // tmp
+    struct openfile *of;
+    struct proc *p = curproc;
 
     KASSERT(curthread != NULL);
     KASSERT(curproc != NULL );
@@ -237,6 +227,7 @@ int sys_read(int fd, userptr_t buf, size_t size, int *retval)
         return err;
     }
 
+    // Store the offset before reading
     offset = of->of_offset;
 
     // Setup the uio record (use a proper function to init all fields)
@@ -244,17 +235,18 @@ int sys_read(int fd, userptr_t buf, size_t size, int *retval)
     u.uio_space = p->p_addrspace;
 	u.uio_segflg = UIO_USERSPACE; // for user space address
 
-    /* VOP_READ - Read data from file to uio, at offset specified
-                  in the uio, updating uio_resid to reflect the
-                  amount read, and updating uio_offset to match.*/
+    // Read data from file to uio at offset specified in the uio
+    // updating uio_resid to reflect the amount read and updating uio_offset to match.
 	err = VOP_READ(of->of_vnode, &u);
 	if (err) {
 		return err;
 	}
 
-    // uio_resid is the remaining byte to read => retval (the read bytes) is size-resid
+    // read returns the actually read bytes =
+    // = size - uio_resid (the remaining byte to read)
     *retval = size - u.uio_resid;
-    // offset update
+    
+    // Offset update
     of->of_offset = u.uio_offset;
 
     // Synchronization of reading operations

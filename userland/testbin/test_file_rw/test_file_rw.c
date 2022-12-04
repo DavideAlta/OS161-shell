@@ -21,9 +21,9 @@ main()
 	static char writebuf1[6+1] = "Hello!";
 	static char writebuf2[12+1] = "Hello again!";
 	static char writebuf3[12+1] = "Hello only!!";
-	static char readbuf1[8];
-	static char readbuf2[6+12+1];
-	static char readbuf3[12+1];
+	static char readbuf1[1024];
+	//static char readbuf2[1024];
+	//static char readbuf3[1024];
 
 	char file_rd[21+1] = "./mytest/testread.txt";
 	char file_wr[22+1] = "./mytest/testwrite.txt";
@@ -45,7 +45,7 @@ main()
 	}
 
 	// Write the opened file (-> "Hello!")
-	rv = write(fd, writebuf1, 6);
+	rv = write(fd, writebuf1, strlen(writebuf1));
 	if (rv<0) {
 		printf("File write failed.\n");
 		printf("Error: %s\n",strerror(errno));
@@ -70,12 +70,16 @@ main()
 	}
 
 	// Read the opened file
-	rv = read(fd, readbuf1, 6);
+	rv = read(fd, readbuf1, sizeof(readbuf1));
+	printf("read() has read %d char.\n",rv);
 	if (rv<0) {
 		printf("File read failed.\n");
 		printf("Error: %s\n",strerror(errno));
 		return rv;
 	}
+
+	// Ensure ternimation at \0
+	readbuf1[rv-1] = 0;
 
 	// Close the file
 	rv = close(fd);
@@ -84,9 +88,6 @@ main()
 		printf("Error: %s\n",strerror(errno));
 		return rv;
 	}
-
-	// Ensure ternimation at \0
-	readbuf1[7] = 0;
 	
 	printf("The read string is %s\n",readbuf1);
 
@@ -99,7 +100,7 @@ main()
 	}
 
 	// Write the opened file (buf will be appended -> "Hello!Hello again!")
-	rv = write(fd, writebuf2, 12);
+	rv = write(fd, writebuf2, strlen(writebuf2));
 	if (rv<0) {
 		printf("File write (append) failed.\n");
 		printf("Error: %s\n",strerror(errno));
@@ -116,12 +117,15 @@ main()
     }
 
 	// Read the opened file
-	rv = read(fd, readbuf2, 18);
+	rv = read(fd, readbuf1, sizeof(readbuf1));
 	if (rv<0) {
 		printf("File read (after append) failed.\n");
 		printf("Error: %s\n",strerror(errno));
 		return rv;
 	}
+
+	// Ensure ternimation at \0
+	readbuf1[rv - 1] = 0;
 
 	// Close the file
 	rv = close(fd);
@@ -130,11 +134,8 @@ main()
 		printf("Error: %s\n",strerror(errno));
 		return rv;
 	}
-
-	// Ensure ternimation at \0
-	readbuf2[18] = 0;
 	
-	printf("The read string (after append) is %s\n",readbuf2);
+	printf("The read string (after append) is %s\n",readbuf1);
 
 	// Re-re-open the written file in trunc mode
 	fd = open(file_wr, O_RDWR|O_TRUNC);
@@ -145,7 +146,7 @@ main()
 	}
 
 	// Write the opened file (after trunc)
-	rv = write(fd, writebuf3, 12);
+	rv = write(fd, writebuf3, strlen(writebuf3));
 	if (rv<0) {
 		printf("File write (trunc) failed.\n");
 		printf("Error: %s\n",strerror(errno));
@@ -162,12 +163,15 @@ main()
     }
 
 	// Read the opened file
-	rv = read(fd, readbuf3, 12);
+	rv = read(fd, readbuf1, sizeof(readbuf1));
 	if (rv<0) {
 		printf("File read (after trunc) failed.\n");
 		printf("Error: %s\n",strerror(errno));
 		return rv;
 	}
+
+	// Ensure ternimation at \0
+	readbuf1[rv - 1] = 0;
 
 	// Close the file
 	rv = close(fd);
@@ -176,11 +180,8 @@ main()
 		printf("Error: %s\n",strerror(errno));
 		return rv;
 	}
-
-	// Ensure ternimation at \0
-	readbuf3[12] = 0;
 	
-	printf("The read string (after trunc) is %s\n",readbuf3); 
+	printf("The read string (after trunc) is %s\n",readbuf1); 
 
 	return 0;
 }
