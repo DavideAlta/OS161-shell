@@ -133,12 +133,15 @@ vfs_chdir(char *path)
 	if (result) {
 		return result;
 	}
+
+	/* Set current directory's vnode */
 	result = vfs_setcurdir(vn);
 	VOP_DECREF(vn);
 	if(result){
 		return result;
 	}
 
+	/* Set current directory's pathname */
 	set_cwd(tmppath);
 
 	return 0;
@@ -200,16 +203,15 @@ set_cwd(char *pathname){
 			if(checkpath[0] == 0){
 				// Exit condition for while loop (/ is needed to avoid strtok_r failure)
 				strcpy(checkpath,"void/");
-				//strcpy(tmppath,"emu0:")
 			}
 		}
 		// in all cases: concatenation and updating of cwd path
 		if(tmppath[0] != 0){ // no previuos directory case (tmppath has been not emptied)
 			if(!((tmppath[0] == '/') || (tmpcwd[strlen(tmpcwd)] == '/'))){
-				strcat(tmpcwd,"/");		//	emu0:	+	/
-				strcat(tmpcwd,tmppath);	//	emu0:/	+	mytest
+				strcat(tmpcwd,"/");
+				strcat(tmpcwd,tmppath);
 			}else{
-				strcat(tmpcwd,tmppath);	//	emu0:/	+	mytest (or viceversa)
+				strcat(tmpcwd,tmppath);
 			}
 		}
 		strcpy(p->p_cwdpath,tmpcwd);
@@ -218,37 +220,40 @@ set_cwd(char *pathname){
 }
 
 /*
-tmpcwd	tmppath	(null)	slash?
-0		0		0		1		emu0:  /  mytest
-0		0		1		0		emu0:     null (empty because ../ case)
-0		1		0		0		emu0:     /mytest
-0		1		1		0		emu0:     null (like bove)
-1		0		0		0		emu0:/    mytest
-1		0		1		0		emu0:/    null (it is an error format)
-1		1		0		0		emu0:/    /mytest (it is an error format)
+TRUTH TABLE TO SLASH INSERTION IN THE PATH:
 
-=> when tmppath is null ( ../ case) slash is no needed (first if statement)
+	tmpcwd	tmppath	(null)	slash?
+	0		0		0		1		emu0:  /  mytest
+	0		0		1		0		emu0:     null (empty because ../ case)
+	0		1		0		0		emu0:     /mytest
+	0		1		1		0		emu0:     null (like bove)
+	1		0		0		0		emu0:/    mytest
+	1		0		1		0		emu0:/    null (it is an error format)
+	1		1		0		0		emu0:/    /mytest (it is an error format)
 
-tmpcwd	tmppath	slash?
-0		0		1		emu0:  /  mytest
-0		1		0		emu0:     /mytest
-1		0		0		emu0:/    mytest
-1		1		0		emu0:/    /mytest (it is an error format)
+	=> when tmppath is null ( ../ case) slash is no needed (first if statement)
 
-This is a nor conditon: not(tmpcwd or tmppath)
+	tmpcwd	tmppath	slash?
+	0		0		1		emu0:  /  mytest
+	0		1		0		emu0:     /mytest
+	1		0		0		emu0:/    mytest
+	1		1		0		emu0:/    /mytest (it is an error format)
+
+	This is a nor conditon: not(tmpcwd or tmppath)
 
 ALLOWED SYNTAX TO MOVE AMONG DIRECTORIES:
----------------------------cwd = emu0: (i.e. root)
-cd emu0:/mytest [absolute path]
-cd /mytest [absolute path: '/' is always preceded by the root "emu0:"]
-cd mytest [relative path: search "mytest" in cwd]
----------------------------cwd = em0:/include/kern
-../../ (to root)
-../../mytest (to root/mytest)
 
-TO DO: (working on vnode but not yet on string)
-../.. (to root)
-.. (to include)
+	---------------------------cwd = emu0: (i.e. root)
+	cd emu0:/mytest [absolute path]
+	cd /mytest [absolute path: '/' is always preceded by the root "emu0:"]
+	cd mytest [relative path: search "mytest" in cwd]
+	---------------------------cwd = em0:/include/kern
+	../../ (to root)
+	../../mytest (to root/mytest)
+
+	TO DO: (working on vnode but not yet on string)
+	../.. (to root)
+	.. (to include)
 */
 
 /*

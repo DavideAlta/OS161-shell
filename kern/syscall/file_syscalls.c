@@ -258,8 +258,8 @@ int sys_read(int fd, userptr_t buf, size_t size, int *retval)
 int sys_close(int fd){
 
     int err;
-    struct openfile *of; // tmp
-    struct proc *p = curproc; // tmp
+    struct openfile *of;
+    struct proc *p = curproc;
 
     KASSERT(curthread != NULL);
     KASSERT(curproc != NULL );
@@ -280,13 +280,15 @@ int sys_close(int fd){
     
     of->of_refcount--;
 
-    if(of->of_refcount == 0){ // Last open => openfile removal
+    // Last open => openfile removal
+    if(of->of_refcount == 0){
         vfs_close(of->of_vnode);
         V(of->of_sem);
         sem_destroy(of->of_sem);
         kfree(of);
 
-    }else{ // No last open (no removal)
+    // No last open (no removal)
+    }else{
         V(of->of_sem);
     }
 
@@ -297,9 +299,8 @@ int sys_close(int fd){
 
 int sys_lseek(int fd, off_t pos, int whence, int64_t *retval){
 
-    int err;
+    int err, filesize;
     off_t offset;
-    int filesize;
     struct stat statbuf;
     struct proc *p = curproc;
     struct openfile *of = p->p_filetable[fd];
@@ -376,9 +377,9 @@ int sys_dup2(int oldfd, int newfd, int *retval){
     KASSERT(curthread != NULL);
     KASSERT(curproc != NULL);
 
-    // Check arguments validity
+    // Check arguments validity:
 
-    // old/newfd is not a valid file handle
+    // - old/newfd is not a valid file handle
     if(oldfd < 0 || oldfd >= OPEN_MAX || oldof == NULL ||
        newfd < 0 || newfd >= OPEN_MAX ){
         err = EBADF;
