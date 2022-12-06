@@ -414,7 +414,6 @@ int sys_dup2(int oldfd, int newfd, int *retval){
 int sys_chdir(userptr_t pathname, int *retval){
 
     int err;
-    struct vnode *vn = NULL;
     char *kpathname, tmppath[PATH_MAX+1];
     struct proc *p = curproc;
     KASSERT(curthread != NULL);
@@ -439,12 +438,7 @@ int sys_chdir(userptr_t pathname, int *retval){
     if(tmppath==NULL){
         return ENOMEM;
     }
-
-    // Obtain a vnode object associated to the passed path to set
-    err = vfs_open(tmppath, O_RDONLY, 0644, &vn);
-    if(err)
-        return err;
-
+    
     // Set the p_cwd vnode with the new one (together to pathname string p_cwdpath)
     err = vfs_chdir((char *)pathname);
     if(err){

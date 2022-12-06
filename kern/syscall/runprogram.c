@@ -77,7 +77,7 @@ runprogram(char *progname, char** args)
 	size_t arglen = 0;
 	int args_size = 0;
 	int padding = 0;
-	char **kargs;
+	char **uargs;
 	char *karg1;
 
 	/* 1. Compute the argument size (considering the padding) */
@@ -149,10 +149,10 @@ runprogram(char *progname, char** args)
 
 	stackptr -= arglen; // computed at step 1
 
-	kargs = (char**)(stackptr - 2*sizeof(char*));
+	uargs = (char**)(stackptr - 2*sizeof(char*));
 	memcpy((char*)stackptr, karg1, arglen);
-	kargs[0] = (char*)stackptr;
-	kargs[1] = NULL;
+	uargs[0] = (char*)stackptr;
+	uargs[1] = NULL;
 
 	// Open the console files: STDIN, STDOUT and STDERR
 	console_init(p);
@@ -161,9 +161,9 @@ runprogram(char *progname, char** args)
 	}
 	
 	/* Warp to user mode. */
-	enter_new_process(1 /*argc*/, (userptr_t)kargs /*userspace addr of argv*/,
+	enter_new_process(1 /*argc*/, (userptr_t)uargs /*userspace addr of argv*/,
 			  NULL /*userspace addr of environment*/,
-			  (vaddr_t)kargs, entrypoint);
+			  (vaddr_t)uargs, entrypoint);
 
 	/* enter_new_process does not return. */
 	panic("enter_new_process returned\n");

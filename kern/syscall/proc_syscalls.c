@@ -275,7 +275,6 @@ int sys_execv(char *program, char **args){
                 kargs_ptr += j; 
                 // Add the \0
                 memcpy(kargs_ptr,"\0",1);
-                //strcat(kargs_ptr,"\0"); // concatenate a \0 char
             }
         }
     }
