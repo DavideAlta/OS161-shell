@@ -14,6 +14,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <limits.h>
 
 int
 main()
@@ -21,9 +22,7 @@ main()
 	static char writebuf1[6+1] = "Hello!";
 	static char writebuf2[12+1] = "Hello again!";
 	static char writebuf3[12+1] = "Hello only!!";
-	static char readbuf1[1024];
-	//static char readbuf2[1024];
-	//static char readbuf3[1024];
+	static char readbuf[PATH_MAX+1];
 
 	char file_rd[21+1] = "./mytest/testread.txt";
 	char file_wr[22+1] = "./mytest/testwrite.txt";
@@ -70,8 +69,7 @@ main()
 	}
 
 	// Read the opened file
-	rv = read(fd, readbuf1, sizeof(readbuf1));
-	printf("read() has read %d char.\n",rv);
+	rv = read(fd, readbuf, sizeof(readbuf));
 	if (rv<0) {
 		printf("File read failed.\n");
 		printf("Error: %s\n",strerror(errno));
@@ -79,7 +77,7 @@ main()
 	}
 
 	// Ensure ternimation at \0
-	readbuf1[rv-1] = 0;
+	readbuf[rv] = 0;
 
 	// Close the file
 	rv = close(fd);
@@ -89,7 +87,7 @@ main()
 		return rv;
 	}
 	
-	printf("The read string is %s\n",readbuf1);
+	printf("The read string is %s\n",readbuf);
 
 	// Re-open the written file in append mode
 	fd = open(file_wr, O_RDWR|O_APPEND);
@@ -117,7 +115,7 @@ main()
     }
 
 	// Read the opened file
-	rv = read(fd, readbuf1, sizeof(readbuf1));
+	rv = read(fd, readbuf, sizeof(readbuf));
 	if (rv<0) {
 		printf("File read (after append) failed.\n");
 		printf("Error: %s\n",strerror(errno));
@@ -125,7 +123,7 @@ main()
 	}
 
 	// Ensure ternimation at \0
-	readbuf1[rv - 1] = 0;
+	readbuf[rv] = 0;
 
 	// Close the file
 	rv = close(fd);
@@ -135,7 +133,7 @@ main()
 		return rv;
 	}
 	
-	printf("The read string (after append) is %s\n",readbuf1);
+	printf("The read string (after append) is %s\n",readbuf);
 
 	// Re-re-open the written file in trunc mode
 	fd = open(file_wr, O_RDWR|O_TRUNC);
@@ -163,7 +161,7 @@ main()
     }
 
 	// Read the opened file
-	rv = read(fd, readbuf1, sizeof(readbuf1));
+	rv = read(fd, readbuf, sizeof(readbuf));
 	if (rv<0) {
 		printf("File read (after trunc) failed.\n");
 		printf("Error: %s\n",strerror(errno));
@@ -171,7 +169,7 @@ main()
 	}
 
 	// Ensure ternimation at \0
-	readbuf1[rv - 1] = 0;
+	readbuf[rv] = 0;
 
 	// Close the file
 	rv = close(fd);
@@ -181,7 +179,7 @@ main()
 		return rv;
 	}
 	
-	printf("The read string (after trunc) is %s\n",readbuf1); 
+	printf("The read string (after trunc) is %s\n",readbuf);
 
 	return 0;
 }

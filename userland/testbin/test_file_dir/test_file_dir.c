@@ -51,7 +51,7 @@ main()
 	}
 
 	// ensure null termination
-	readbuf[rv-1] = 0;
+	readbuf[rv] = 0;
 
 	printf("The current dir is %s\n",path1);
 	printf("The where.txt contain: %s \n",readbuf);
@@ -98,7 +98,7 @@ main()
 	}
 
     // ensure null termination
-	readbuf[rv-1] = 0;
+	readbuf[rv] = 0;
 
 	printf("The current dir is %s\n",path2);
 	printf("The where.txt contain: %s \n",readbuf);
@@ -147,7 +147,7 @@ main()
 	}
 
 	// ensure null termination
-	readbuf[rv-1] = 0;
+	readbuf[rv] = 0;
 
 	printf("The current dir is %s\n",path1);
 	printf("The where.txt contain: %s \n",readbuf);

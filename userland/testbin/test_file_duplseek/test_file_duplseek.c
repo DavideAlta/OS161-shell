@@ -12,12 +12,12 @@
 #include <unistd.h>
 #include <err.h>
 #include <errno.h>
+#include <limits.h>
 
 int
 main()
 {
-	static char readbuf1[8];
-    static char readbuf2[8];
+	static char readbuf[PATH_MAX+1];
 
 	char file_rd[22] = "./mytest/testread.txt";
 
@@ -33,7 +33,7 @@ main()
 		return fd;
 	}
 
-	rv = read(fd, readbuf1, 8);
+	rv = read(fd, readbuf, sizeof(readbuf));
 	if (rv<0) {
 		printf("File read 1 failed.\n");
 		printf("Error: %s\n",strerror(errno));
@@ -41,9 +41,9 @@ main()
 	}
 
     /* ensure null termination */
-	readbuf1[7] = 0;
+	readbuf[rv] = 0;
 
-    printf("1st reading = %s\n",readbuf1);
+    printf("1st reading = %s\n",readbuf);
 
 	// duplicate the file descriptor 
     rv = dup2(fd, fd_clone);
@@ -68,7 +68,7 @@ main()
 	}
     
 	// the file isn't close since fd_clone still point to it 
-    rv = read(fd_clone, readbuf2, 8);
+    rv = read(fd_clone, readbuf, sizeof(readbuf));
     if (rv<0) {
 		printf("File read 2 failed.\n");
 		printf("Error: %s\n",strerror(errno));
@@ -76,9 +76,9 @@ main()
 	}
 
     /* ensure null termination */
-	readbuf2[7] = 0;
+	readbuf[rv] = 0;
 
-    printf("2nd reading = %s\n",readbuf2);
+    printf("2nd reading = %s\n",readbuf);
 
     rv = close(fd_clone);
 	if (rv<0) {
