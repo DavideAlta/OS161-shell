@@ -43,7 +43,7 @@ main()
 		return -1;
 	}
 
-	rv = read(fd, readbuf, PATH_MAX);
+	rv = read(fd, readbuf, sizeof(readbuf));
 	if (rv<0) {
 		printf("File read 1 failed.\n");
 		printf("Error: %s\n",strerror(errno));
@@ -51,7 +51,7 @@ main()
 	}
 
 	// ensure null termination
-	readbuf[PATH_MAX] = 0;
+	readbuf[rv-1] = 0;
 
 	printf("The current dir is %s\n",path1);
 	printf("The where.txt contain: %s \n",readbuf);
@@ -90,7 +90,7 @@ main()
 		return -1;
 	}
 
-	rv = read(fd, readbuf, PATH_MAX);
+	rv = read(fd, readbuf, sizeof(readbuf));
 	if (rv<0) {
 		printf("File read 1 failed.\n");
 		printf("Error: %s\n",strerror(errno));
@@ -98,7 +98,7 @@ main()
 	}
 
     // ensure null termination
-	readbuf[PATH_MAX] = 0;
+	readbuf[rv-1] = 0;
 
 	printf("The current dir is %s\n",path2);
 	printf("The where.txt contain: %s \n",readbuf);
@@ -139,7 +139,7 @@ main()
 
 	
 
-	rv = read(fd, readbuf, 19);
+	rv = read(fd, readbuf, sizeof(readbuf));
 	if (rv<0) {
 		printf("File read 1 failed.\n");
 		printf("Error: %s\n",strerror(errno));
@@ -147,7 +147,7 @@ main()
 	}
 
 	// ensure null termination
-	readbuf[19] = 0;
+	readbuf[rv-1] = 0;
 
 	printf("The current dir is %s\n",path1);
 	printf("The where.txt contain: %s \n",readbuf);

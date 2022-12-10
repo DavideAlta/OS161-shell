@@ -171,7 +171,7 @@ int sys_write(int fd, userptr_t buf, size_t buflen, int *retval){
     offset = of->of_offset;
 
     // Setup the uio record (use a proper function to init all fields)
-	uio_uinit(&iov, &u, buf, buflen+1, (off_t)offset, UIO_WRITE);
+	uio_uinit(&iov, &u, buf, buflen, (off_t)offset, UIO_WRITE);
     u.uio_space = p->p_addrspace;
 	u.uio_segflg = UIO_USERSPACE; // for user space address
 
@@ -438,7 +438,7 @@ int sys_chdir(userptr_t pathname, int *retval){
     if(tmppath==NULL){
         return ENOMEM;
     }
-    
+
     // Set the p_cwd vnode with the new one (together to pathname string p_cwdpath)
     err = vfs_chdir((char *)pathname);
     if(err){
