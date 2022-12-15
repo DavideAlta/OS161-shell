@@ -90,8 +90,9 @@ cmd_progthread(void *ptr, unsigned long nargs)
 	result = runprogram(progname, args);
 	if (result) {
 		kprintf("Running program %s failed: %s\n", args[0],
-			strerror(result));
-		return;
+		strerror(result));
+		// sys__exit signals the semaphore to avoid the menu infinite loop due to sys_waitpid
+		sys__exit(result);
 	}
 
 	/* NOTREACHED: runprogram only returns on error. */

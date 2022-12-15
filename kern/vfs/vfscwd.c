@@ -155,7 +155,7 @@ vfs_chdir(char *path)
 int
 set_cwd(char *pathname){
 
-	int len, i;
+	int len, i, n;
     char tmpcwd[PATH_MAX+1], checkpath[PATH_MAX+1], tmppath[PATH_MAX+1];
     struct proc *p = curproc;
     char *context;
@@ -181,7 +181,13 @@ set_cwd(char *pathname){
 
 	// else is relative path
 	}else{
+		strcpy(checkpath, pathname);
 		// previous directory case
+		n = strlen(checkpath);
+		// whithout / at the end (".." or "../..")
+		if((checkpath[n-1] == '.') && (checkpath[n-2] == '.')){
+			strcat(checkpath,"/");
+		}
 		while(strcmp(strtok_r(checkpath,"/",&context),"..") == 0){
 			// remove "../" from tmppath
 			len = strlen(tmppath);
@@ -250,10 +256,8 @@ ALLOWED SYNTAX TO MOVE AMONG DIRECTORIES:
 	---------------------------cwd = em0:/include/kern
 	../../ (to root)
 	../../mytest (to root/mytest)
-
-	TO DO: (working on vnode but not yet on string)
 	../.. (to root)
-	.. (to include)
+	.. (to include)	
 */
 
 /*

@@ -189,8 +189,8 @@ int sys_write(int fd, userptr_t buf, size_t buflen, int *retval){
     V(of->of_sem);
 
     // write returns the amount actually written =
-    // = offset after the writing - offset before writing (-1 due to EOF)
-    *retval = u.uio_offset - offset - 1;
+    // = offset after the writing - offset before writing
+    *retval = u.uio_offset - offset;
 
     return 0;
 }

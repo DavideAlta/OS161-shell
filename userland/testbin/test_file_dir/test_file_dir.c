@@ -23,8 +23,6 @@ main()
 	static char readbuf[PATH_MAX+1];
 	char back_dir[3+1] = "../";
 	
-
-	
 	p = getcwd(path1, sizeof(path1));
 	if(p == NULL){
 		printf("getcwd 1 failed.\n");
@@ -33,8 +31,7 @@ main()
 	}
 
 	/* ensure null termination */
-	path1[31] = 0;
-
+	path1[PATH_MAX] = 0;
 
 	fd = open(file_rd, O_RDONLY);
 	if (fd<0) {
@@ -56,14 +53,12 @@ main()
 	printf("The current dir is %s\n",path1);
 	printf("The where.txt contain: %s \n",readbuf);
 
-
 	rv = close(fd);
 	if (rv<0) {
 		printf("File close rd failed.\n");
 		printf("Error: %s\n",strerror(errno));
 		return -1;
 	}
-
 
 	rv = chdir(newpath);
 	if(rv == -1){
@@ -80,8 +75,7 @@ main()
 	}
 
 	/* ensure null termination */
-	path2[PATH_MAX-1] = 0;
-
+	path2[PATH_MAX] = 0;
 
 	fd = open(file_rd, O_RDONLY);
 	if (fd<0) {
@@ -110,7 +104,6 @@ main()
 		return -1;
 	}
 
-
 	// return back with relative command ../
 	rv = chdir(back_dir);
 	if(rv == -1){
@@ -127,7 +120,7 @@ main()
 	}
 
 	/* ensure null termination */
-	path1[31] = 0;
+	path1[PATH_MAX] = 0;
 
 
 	fd = open(file_rd, O_RDONLY);
@@ -136,8 +129,6 @@ main()
 		printf("Error: %s\n",strerror(errno));
 		return -1;
 	}
-
-	
 
 	rv = read(fd, readbuf, sizeof(readbuf));
 	if (rv<0) {
@@ -151,7 +142,6 @@ main()
 
 	printf("The current dir is %s\n",path1);
 	printf("The where.txt contain: %s \n",readbuf);
-
 
 	rv = close(fd);
 	if (rv<0) {
