@@ -414,7 +414,6 @@ int sys_dup2(int oldfd, int newfd, int *retval){
 int sys_chdir(userptr_t pathname, int *retval){
 
     int err;
-    char *kpathname, tmppath[PATH_MAX+1];
     struct proc *p = curproc;
     KASSERT(curthread != NULL);
     KASSERT(p != NULL );
@@ -425,18 +424,6 @@ int sys_chdir(userptr_t pathname, int *retval){
     if(pathname == NULL){
         err = EFAULT;
         return err;
-    }
-
-    // Copy the pathname string from user to kernel space to protect it
-    kpathname = kstrdup((char *)pathname);
-    if(kpathname==NULL){
-        return ENOMEM;
-    }
-
-    // Useful because vfs_open changes the string
-    strcpy(tmppath,kpathname);
-    if(tmppath==NULL){
-        return ENOMEM;
     }
 
     // Set the p_cwd vnode with the new one (together to pathname string p_cwdpath)
